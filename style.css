@@ -143,3 +143,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .zoomBox svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .zoomBox button:disabled{opacity:.45}
 @media (max-width:480px){.zoomBox{bottom:calc(env(safe-area-inset-bottom,0px) + 96px);right:8px}.zoomBox button{width:40px;height:40px}}
+
+#game{cursor:grab}#game:active{cursor:grabbing}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

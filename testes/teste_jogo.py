@@ -239,4 +239,23 @@ def run_mapa(viewport, mobile):
 
 run_mapa({'width': 1280, 'height': 800}, False)
 run_mapa({'width': 390, 'height': 844}, True)
+
+def run_extras():
+    with sync_playwright() as p:
+        b = p.chromium.launch(executable_path=CHROME)
+        ctx = b.new_context(viewport={'width': 390, 'height': 844}, reduced_motion='reduce', has_touch=True, is_mobile=True)
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(500)
+        pg.click('#zAll', force=True); pg.wait_for_timeout(120)
+        check('[movimento reduzido] visão geral sem animação (imediata)', abs(pg.evaluate('CF.E.cam.zoom') - pg.evaluate('CF.E.minZoom')) < .001)
+        prevent = pg.evaluate("(()=>{const e=new Event('gesturestart',{cancelable:true});document.dispatchEvent(e);return e.defaultPrevented})()")
+        check('[iPhone] gesto de zoom da página é bloqueado (só o mapa amplia)', prevent)
+        check('[extras] sem erros de script', not errs, errs[:3])
+        ctx2 = b.new_context(viewport={'width': 1280, 'height': 800}); pg2 = ctx2.new_page(); pg2.goto(URL); pg2.wait_for_function('window.CF && window.CF.st'); pg2.wait_for_timeout(500)
+        x, y = pg2.evaluate("(()=>{const b=CF.S.celeiro.bounds();const s=CF.E.toScreen(b.x+b.w/2,b.y+b.h*.6);return [s.x,s.y]})()")
+        pg2.mouse.move(x, y); pg2.wait_for_timeout(150); pg2.mouse.move(x + 2, y + 2); pg2.wait_for_timeout(150)
+        check('[computador] mãozinha em cima do celeiro', pg2.evaluate("document.getElementById('game').style.cursor") == 'pointer')
+        b.close()
+run_extras()
+
 print(f"\n{len(res)} testes no total, {sum(1 for r in res if not r[1])} falhas")

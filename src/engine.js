@@ -61,12 +61,17 @@ export class Engine {
     this.cam.y = vh >= this.world.h ? this.world.h - vh + Math.min(60, (vh - this.world.h) / 2) : Math.min(Math.max(0, this.cam.y), this.world.h - vh);
   }
   /* zoom suave pelos botões (mantém o centro da tela no lugar) */
+  get calmo() {
+    if (this._calmoMq === undefined) { try { this._calmoMq = matchMedia('(prefers-reduced-motion: reduce)'); } catch (_) { this._calmoMq = null; } }
+    return !!(this._calmoMq && this._calmoMq.matches);
+  }
   zoomTo(z, cx, cy, dur = .28) {
+    if (this.calmo) dur = .001;
     z = Math.min(this.maxZoom, Math.max(this.minZoom, z)); const o = { z: this.cam.zoom };
     cx = cx == null ? this.vw / 2 : cx; cy = cy == null ? this.vh / 2 : cy;
     this._zt = { from: this.cam.zoom, to: z, cx, cy, t0: this.t, dur };
   }
-  flyTo(wx, wy, z, dur = .45) { this._fly = { x0: this.cam.x + this.vw / 2 / this.cam.zoom, y0: this.cam.y + this.vh / 2 / this.cam.zoom, x1: wx, y1: wy, z0: this.cam.zoom, z1: Math.min(this.maxZoom, Math.max(this.minZoom, z)), t0: this.t, dur }; this._zt = null; }
+  flyTo(wx, wy, z, dur = .45) { if (this.calmo) dur = .001; this._fly = { x0: this.cam.x + this.vw / 2 / this.cam.zoom, y0: this.cam.y + this.vh / 2 / this.cam.zoom, x1: wx, y1: wy, z0: this.cam.zoom, z1: Math.min(this.maxZoom, Math.max(this.minZoom, z)), t0: this.t, dur }; this._zt = null; }
   toWorld(sx, sy) { return { x: this.cam.x + sx / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom }; }
   toScreen(wx, wy) { return { x: (wx - this.cam.x) * this.cam.zoom, y: (wy - this.cam.y) * this.cam.zoom }; }
 
@@ -161,6 +166,16 @@ export class Engine {
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('wheel', e => { e.preventDefault(); this._zt = null; this._fly = null; const f = Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * (e.ctrlKey ? .012 : .0025)); this.setZoom(this.cam.zoom * f, e.offsetX, e.offsetY); }, { passive: false });
     cv.addEventListener('contextmenu', e => e.preventDefault());
+    /* Safari do iPhone: impede o zoom da página inteira (gesto nativo), deixando só o zoom do mapa */
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+    document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    let ultimo = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - ultimo < 320 && e.target === cv) e.preventDefault(); ultimo = n; }, { passive: false });
+    /* computador: mãozinha em cima do que dá para tocar */
+    cv.addEventListener('pointermove', e => {
+      if (e.pointerType !== 'mouse' || this._ptr.size) return;
+      const n = performance.now(); if (n - (this._hov || 0) < 60) return; this._hov = n;
+      const w = this.toWorld(e.offsetX, e.offsetY); cv.style.cursor = this.pick(w.x, w.y) ? 'pointer' : 'grab';
+    });
   }
   _pinchInfo() { const a = [...this._ptr.values()]; if (a.length < 2) return { d: 0, cx: 0, cy: 0 }; return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), cx: (a[0].x + a[1].x) / 2, cy: (a[0].y + a[1].y) / 2 }; }
 }

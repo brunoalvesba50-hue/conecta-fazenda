@@ -249,7 +249,7 @@ export function buildScene(E, IMG, api) {
   /* atualização por quadro */
   let acc = 0;
   E.onFrame = (t, dt) => {
-    for (const w of sway) w.s.rot = Math.sin(t * .8 + w.ph) * .012;
+    if (!E.calmo) for (const w of sway) w.s.rot = Math.sin(t * .8 + w.ph) * .012;
     acc += dt; const st = api.state();
     if (acc > .2) { acc = 0; const now = agora(); for (const P of S.plots) { P.e = estadoCanteiro(st, P.i, now); P.hasPlant = P.e.tipo === 'crescendo' || P.e.tipo === 'pronto'; } api.tick && api.tick(now); }
     for (const A of S.animals) stepAnimal(A, dt);
