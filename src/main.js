@@ -5,7 +5,7 @@ import { CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, PADARIA, MISS
 import * as G from './game.js';
 import { carregar, salvar, apagarSave } from './state.js';
 
-const IMGS = ['fundo_sao_bento', 'terra', 'cerca', 'cerca_madeira', 'portao', 'araucaria', 'ipe_amarelo', 'ipe_rosa', 'arvore_frutifera', 'pinheiro', 'pinheiro2', 'lagoinha', 'pedras', 'casa', 'celeiro', 'galinheiro', 'poco', 'padaria', 'vaca1', 'vaca2', 'vaca3', 'galinha1', 'galinha2', 'p_idle', 'p_plantando', 'p_colhendo', 'p_acenando', 'cesto', 'caixa', 'saco', 'banco', 'lampiao', 'placa', 'carroca', 'feno', 'flores', 'tronco'];
+const IMGS = ['fundo_sao_bento', 'terra', 'cerca', 'cerca_madeira', 'portao', 'araucaria', 'ipe_amarelo', 'ipe_rosa', 'arvore_frutifera', 'pinheiro', 'pinheiro2', 'lagoinha', 'pedras', 'casa', 'celeiro', 'galinheiro', 'poco', 'padaria', 'vaca1', 'vaca2', 'vaca3', 'galinha1', 'galinha2', 'p_idle', 'p_plantando', 'p_colhendo', 'p_acenando', 'canteiro_vazio', 'cesto', 'caixa', 'saco', 'banco', 'lampiao', 'placa', 'carroca', 'feno', 'flores', 'tronco'];
 for (const [k, c] of Object.entries(CULTURAS)) for (let i = 1; i <= c.stages; i++) IMGS.push(`${k}_${i}`);
 for (const p of Object.values(PRODUTOS)) if (!IMGS.includes(p.icone)) IMGS.push(p.icone);
 const manifest = Object.fromEntries(IMGS.map(n => [n, `assets/img/${n}.webp`]));
@@ -230,6 +230,14 @@ document.querySelector('.bottom').addEventListener('click', e => {
 });
 $('bMissoes').onclick = () => painelMissoes('missoes');
 $('mChip').onclick = () => { const m = G.missaoAtual(st); if (m && m.completa) ACOES.resgatar(); else painelMissoes('missoes'); };
+/* zoom: botões (o gesto de pinça e a roda do mouse estão no engine.js) */
+const FAZENDA = { x: 900, y: 980 };
+function visaoInicial() { const cel = E.vw < 700; return { x: cel ? 860 : 900, y: 30 + E.vh / (cel ? .68 : .74) / 2, z: Math.max(E.coverZoom, cel ? .68 : .74) }; }
+$('zIn').onclick = () => E.zoomTo(E.cam.zoom * 1.35);
+$('zOut').onclick = () => E.zoomTo(E.cam.zoom / 1.35);
+$('zAll').onclick = () => E.flyTo(WORLD.w / 2, WORLD.h / 2, E.minZoom);
+$('zHome').onclick = () => { const v = visaoInicial(); E.flyTo(v.x, v.y, v.z); };
+setInterval(() => { if (!E) return; $('zIn').disabled = E.cam.zoom >= E.maxZoom - .001; $('zOut').disabled = E.cam.zoom <= E.minZoom + .001; }, 300);
 $('bCeleiro').onclick = painelCeleiro; $('bMapa').onclick = painelMapa; $('bConfig').onclick = painelAjustes; $('bGanhar').onclick = painelGanhar;
 
 /* ---------- início ---------- */
@@ -240,11 +248,8 @@ $('bCeleiro').onclick = painelCeleiro; $('bMapa').onclick = painelMapa; $('bConf
   const c = carregar(); st = c.st; if (c.novo) salvar(st);
   E = new Engine($('game'), WORLD);
   S = buildScene(E, IMG, api);
-  const cel = E.vw < 700;
-  E.setZoom(Math.max(E.minZoom, cel ? .68 : .74));
-  /* mostra a Pedra do Baú no alto e os canteiros embaixo */
-  E.centerOn(cel ? 860 : 900, 30 + E.vh / E.cam.zoom / 2);
-  window.CF = { get st() { return st; }, E, S, G, salvar: salvarJa };
+  { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); }
+  window.CF = { get st() { return st; }, E, S, G, WORLD, salvar: salvarJa };
   $('hud').classList.remove('hidden'); atualizaHud();
   $('loading').remove();
   if (c.aviso) toast(c.aviso, true);

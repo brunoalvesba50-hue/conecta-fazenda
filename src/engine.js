@@ -40,8 +40,10 @@ export class Engine {
     this.vw = Math.max(1, r.width); this.vh = Math.max(1, r.height);
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.cv.width = Math.round(this.vw * this.dpr); this.cv.height = Math.round(this.vh * this.dpr);
-    this.minZoom = Math.max(this.vw / this.world.w, this.vh / this.world.h);
-    this.maxZoom = Math.max(this.minZoom * 2.2, 1.3);
+    /* menor zoom = mapa inteiro cabe na tela (visão geral); maior = detalhes das plantas e casas */
+    this.coverZoom = Math.max(this.vw / this.world.w, this.vh / this.world.h);
+    this.minZoom = Math.min(this.vw / this.world.w, this.vh / this.world.h) * .98;
+    this.maxZoom = Math.max(1.7, this.coverZoom * 2.6);
     this.setZoom(this.cam.zoom || 1); this.clamp();
   }
   setZoom(z, cx, cy) {
@@ -51,11 +53,20 @@ export class Engine {
     this.cam.zoom = z; this.cam.x = wx - cx / z; this.cam.y = wy - cy / z; this.clamp();
   }
   centerOn(wx, wy) { this.cam.x = wx - this.vw / 2 / this.cam.zoom; this.cam.y = wy - this.vh / 2 / this.cam.zoom; this.clamp(); }
+  /* o mapa nunca some da tela: se a tela é maior que o mapa, ele fica centralizado */
   clamp() {
     const vw = this.vw / this.cam.zoom, vh = this.vh / this.cam.zoom;
-    this.cam.x = Math.min(Math.max(0, this.cam.x), Math.max(0, this.world.w - vw));
-    this.cam.y = Math.min(Math.max(0, this.cam.y), Math.max(0, this.world.h - vh));
+    this.cam.x = vw >= this.world.w ? (this.world.w - vw) / 2 : Math.min(Math.max(0, this.cam.x), this.world.w - vw);
+    /* tela mais alta que o mapa (visão geral no celular): o chão fica embaixo e sobra céu em cima */
+    this.cam.y = vh >= this.world.h ? this.world.h - vh + Math.min(60, (vh - this.world.h) / 2) : Math.min(Math.max(0, this.cam.y), this.world.h - vh);
   }
+  /* zoom suave pelos botões (mantém o centro da tela no lugar) */
+  zoomTo(z, cx, cy, dur = .28) {
+    z = Math.min(this.maxZoom, Math.max(this.minZoom, z)); const o = { z: this.cam.zoom };
+    cx = cx == null ? this.vw / 2 : cx; cy = cy == null ? this.vh / 2 : cy;
+    this._zt = { from: this.cam.zoom, to: z, cx, cy, t0: this.t, dur };
+  }
+  flyTo(wx, wy, z, dur = .45) { this._fly = { x0: this.cam.x + this.vw / 2 / this.cam.zoom, y0: this.cam.y + this.vh / 2 / this.cam.zoom, x1: wx, y1: wy, z0: this.cam.zoom, z1: Math.min(this.maxZoom, Math.max(this.minZoom, z)), t0: this.t, dur }; this._zt = null; }
   toWorld(sx, sy) { return { x: this.cam.x + sx / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom }; }
   toScreen(wx, wy) { return { x: (wx - this.cam.x) * this.cam.zoom, y: (wy - this.cam.y) * this.cam.zoom }; }
 
@@ -67,6 +78,8 @@ export class Engine {
   }
 
   _step() {
+    if (this._zt) { const a = this._zt, p = Math.min(1, (this.t - a.t0) / a.dur), e = ease.out(p); this.setZoom(a.from + (a.to - a.from) * e, a.cx, a.cy); if (p >= 1) this._zt = null; }
+    if (this._fly) { const f = this._fly, p = Math.min(1, (this.t - f.t0) / f.dur), e = ease.inOut(p); this.cam.zoom = f.z0 + (f.z1 - f.z0) * e; this.centerOn(f.x0 + (f.x1 - f.x0) * e, f.y0 + (f.y1 - f.y0) * e); if (p >= 1) this._fly = null; }
     if (this.onFrame) this.onFrame(this.t, this.dt);
     const keep = [];
     for (const tw of this.tweens) {
@@ -120,22 +133,33 @@ export class Engine {
   }
   _bind() {
     const cv = this.cv;
-    cv.addEventListener('pointerdown', e => { cv.setPointerCapture?.(e.pointerId); this._ptr.set(e.pointerId, { x: e.offsetX, y: e.offsetY, x0: e.offsetX, y0: e.offsetY, t: performance.now() }); if (this._ptr.size === 2) this._pinch = this._pinchInfo(); });
+    cv.addEventListener('pointerdown', e => { if (e.button > 0) return; try { cv.setPointerCapture(e.pointerId); } catch (_) {} this._zt = null; this._fly = null; if (!this._ptr.size) this._gesto = false; this._ptr.set(e.pointerId, { x: e.offsetX, y: e.offsetY, x0: e.offsetX, y0: e.offsetY, t: performance.now() }); if (this._ptr.size >= 2) { this._gesto = true; this._pinch = this._pinchInfo(); } });
     cv.addEventListener('pointermove', e => {
       const p = this._ptr.get(e.pointerId); if (!p) return;
       const dx = e.offsetX - p.x, dy = e.offsetY - p.y; p.x = e.offsetX; p.y = e.offsetY;
-      if (this._ptr.size === 2 && this._pinch) { const n = this._pinchInfo(); if (n.d > 0 && this._pinch.d > 0) { this.setZoom(this.cam.zoom * n.d / this._pinch.d, n.cx, n.cy); this.cam.x -= (n.cx - this._pinch.cx) / this.cam.zoom; this.cam.y -= (n.cy - this._pinch.cy) / this.cam.zoom; this.clamp(); } this._pinch = n; p.moved = true; return; }
+      if (this._ptr.size >= 2 && this._pinch) {
+        /* pinça: o ponto do mapa que estava entre os dedos continua entre os dedos */
+        const n = this._pinchInfo(), o = this._pinch;
+        if (n.d > 0 && o.d > 0) {
+          const w = this.toWorld(o.cx, o.cy);
+          this.cam.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.cam.zoom * n.d / o.d));
+          this.cam.x = w.x - n.cx / this.cam.zoom; this.cam.y = w.y - n.cy / this.cam.zoom; this.clamp();
+        }
+        this._pinch = n; p.moved = true; return;
+      }
+      if (this._gesto && this._ptr.size === 1 && !p.moved) p.moved = true;
       if (Math.hypot(e.offsetX - p.x0, e.offsetY - p.y0) > 8) p.moved = true;
       if (p.moved) { this.cam.x -= dx / this.cam.zoom; this.cam.y -= dy / this.cam.zoom; this.clamp(); }
     });
     const up = e => {
       const p = this._ptr.get(e.pointerId); this._ptr.delete(e.pointerId); if (this._ptr.size < 2) this._pinch = null;
-      if (!p || p.moved || e.type === 'pointercancel' || this._ptr.size) return;
+      /* tocar só conta se foi um dedo só, sem arrastar e sem pinça antes (zoom nunca planta/colhe) */
+      if (!p || p.moved || e.type === 'pointercancel' || this._ptr.size || this._gesto) { if (!this._ptr.size) this._gesto = false; return; }
       const w = this.toWorld(e.offsetX, e.offsetY), s = this.pick(w.x, w.y);
       if (s) s.onTap(s, w); else if (this.onTapEmpty) this.onTapEmpty(w);
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    cv.addEventListener('wheel', e => { e.preventDefault(); this.setZoom(this.cam.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.offsetX, e.offsetY); }, { passive: false });
+    cv.addEventListener('wheel', e => { e.preventDefault(); this._zt = null; this._fly = null; const f = Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * (e.ctrlKey ? .012 : .0025)); this.setZoom(this.cam.zoom * f, e.offsetX, e.offsetY); }, { passive: false });
     cv.addEventListener('contextmenu', e => e.preventDefault());
   }
   _pinchInfo() { const a = [...this._ptr.values()]; if (a.length < 2) return { d: 0, cx: 0, cy: 0 }; return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), cx: (a[0].x + a[1].x) / 2, cy: (a[0].y + a[1].y) / 2 }; }

@@ -4,6 +4,7 @@ import { Sprite, ease } from './engine.js';
 import { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS } from './data.js';
 import { estadoCanteiro, estadoAnimal, estadoPadaria, fmtTempo, agora } from './game.js';
 import { CROPMETA } from './cropmeta.js';
+import { desenhaEstradas } from './roads.js';
 
 export const WORLD = { w: 1800, h: 1380 };
 const GROUND_TOP = 440;
@@ -16,7 +17,7 @@ function inDiamond(px, py, x, y) { return Math.abs(px - x) / PLOT.hw + Math.abs(
 
 /* ---------- texturas geradas ---------- */
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-function grassCanvas(W, H, paths) {
+function grassCanvas(W, H, comEstradas = true) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); const r = rng(7);
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#62780c'); g.addColorStop(.25, '#6f9018'); g.addColorStop(1, '#5c8420'); c.fillStyle = g; c.fillRect(0, 0, W, H);
   const cols = ['#83a52a', '#5f8012', '#8fb038', '#53740e', '#99b84a', '#6c8f1c'];
@@ -25,12 +26,8 @@ function grassCanvas(W, H, paths) {
   for (let i = 0; i < 9000; i++) { const x = r() * W, y = r() * H, h = 4 + r() * 9; c.strokeStyle = r() < .5 ? '#a2c23f' : '#4b6b0e'; c.lineWidth = 1 + r() * .8; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - .5) * 4, y - h); c.stroke(); }
   c.globalAlpha = 1;
   for (let i = 0; i < 260; i++) { const x = r() * W, y = 40 + r() * (H - 40); c.fillStyle = ['#fff7d6', '#ffd84a', '#f6a8c8', '#ffffff'][Math.floor(r() * 4)]; c.beginPath(); c.arc(x, y, 1.6 + r() * 1.8, 0, 7); c.fill(); }
-  /* caminhos de terra */
-  for (const p of paths) {
-    const line = (w, col, a) => { c.globalAlpha = a; c.strokeStyle = col; c.lineWidth = w; c.lineJoin = c.lineCap = 'round'; c.beginPath(); c.moveTo(p[0][0], p[0][1] - GROUND_TOP); for (let k = 1; k < p.length; k++) { const a0 = p[k - 1], a1 = p[k]; c.quadraticCurveTo(a0[0], a0[1] - GROUND_TOP, (a0[0] + a1[0]) / 2, (a0[1] + a1[1]) / 2 - GROUND_TOP); } const l = p[p.length - 1]; c.lineTo(l[0], l[1] - GROUND_TOP); c.stroke(); };
-    line(58, '#7b5a2c', .35); line(48, '#b98a52', 1); line(30, '#cf9f64', .55);
-  }
-  c.globalAlpha = 1;
+  /* estradas: rede única desenhada em camadas (ver roads.js) */
+  if (comEstradas) desenhaEstradas(c, GROUND_TOP);
   /* emenda suave com o fundo */
   const fade = c.createLinearGradient(0, 0, 0, 80); fade.addColorStop(0, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
   c.globalCompositeOperation = 'destination-out'; c.fillStyle = fade; c.fillRect(0, 0, W, 80); c.globalCompositeOperation = 'source-over';
@@ -93,23 +90,35 @@ export function buildScene(E, IMG, api) {
   /* céu + fundo com a Pedra do Baú (leve efeito de profundidade ao mover) */
   const bg = IMG.fundo_sao_bento, bgW = WORLD.w * 1.12, bgH = bg.height * bgW / bg.width;
   E.before = c => {
-    const sky = c.createLinearGradient(0, 0, 0, 120); sky.addColorStop(0, '#5aa5e6'); sky.addColorStop(1, '#8cc4ee'); c.fillStyle = sky; c.fillRect(-50, -50, WORLD.w + 100, 200);
-    const vw = E.vw / E.cam.zoom, maxX = Math.max(1, WORLD.w - vw), k = E.cam.x / maxX;
-    c.drawImage(bg, -k * (bgW - WORLD.w), 30, bgW, bgH);
+    /* fora do mapa (visão geral): céu em cima e grama embaixo, para nunca aparecer vazio */
+    const vx = E.cam.x - 4, vy = E.cam.y - 4, vw = E.vw / E.cam.zoom + 8, vh = E.vh / E.cam.zoom + 8;
+    const sky = c.createLinearGradient(0, vy, 0, 200); sky.addColorStop(0, '#4f9be0'); sky.addColorStop(1, '#8cc4ee');
+    c.fillStyle = sky; c.fillRect(vx, vy, vw, Math.max(0, 300 - vy));
+    c.fillStyle = '#5c8420'; c.fillRect(vx, 300, vw, vy + vh - 300);
+    const maxX = WORLD.w - E.vw / E.cam.zoom, k = maxX > 1 ? Math.min(1, Math.max(0, E.cam.x / maxX)) : .5;
+    const x0 = -k * (bgW - WORLD.w);
+    c.drawImage(bg, x0, 30, bgW, bgH);
+    /* nas laterais (só aparece com o mapa bem afastado): a paisagem espelhada continua sem emenda */
+    if (vx < x0 || vx + vw > x0 + bgW) { c.save(); c.scale(-1, 1); c.drawImage(bg, -x0, 30, bgW, bgH); c.drawImage(bg, -(x0 + 2 * bgW), 30, bgW, bgH); c.restore(); }
   };
-  const ground = grassCanvas(WORLD.w, WORLD.h - GROUND_TOP, [
-    [[560, 800], [640, 900], [760, 960]],
-    [[620, 810], [900, 830], [1180, 820], [1300, 800]],
-    [[640, 900], [560, 1120], [540, 1280], [580, 1380]],
-    [[1300, 830], [1450, 880], [1600, 900]],
-    [[980, 1170], [1120, 1270], [1400, 1290]],
-  ]);
-  add({ layer: 0, z: -1, draw: c => c.drawImage(ground, 0, GROUND_TOP) });
+  const ground = grassCanvas(WORLD.w, WORLD.h - GROUND_TOP);
+  let grama = null; /* grama sem estradas, só para preencher fora do mapa na visão geral */
+  const gramaFora = () => grama || (grama = grassCanvas(WORLD.w, WORLD.h - GROUND_TOP, false));
+  add({ layer: 0, z: -1, draw: c => {
+    c.drawImage(ground, 0, GROUND_TOP);
+    const vx = E.cam.x, vw = E.vw / E.cam.zoom;
+    if (vx < 0 || vx + vw > WORLD.w) { const g = gramaFora(); c.save(); c.scale(-1, 1); c.drawImage(g, 0, GROUND_TOP); c.drawImage(g, -2 * WORLD.w, GROUND_TOP); c.restore(); }
+    if (E.cam.y + E.vh / E.cam.zoom > WORLD.h) { const g = gramaFora(); c.save(); c.translate(0, 2 * WORLD.h); c.scale(1, -1); c.drawImage(g, 0, GROUND_TOP); c.restore(); }
+  } });
 
   /* árvores e natureza (fundo da propriedade) */
-  const tree = (img, x, y, w, layerZ) => { const s = add({ img: IMG[img], x, y, s: w / IMG[img].width, z: layerZ }); sway.push({ s, ph: x * .013 }); return s; };
+  const tree = (img, x, y, w, flip) => { const s = add({ img: IMG[img], x, y, s: w / IMG[img].width, flip: !!flip }); sway.push({ s, ph: x * .013 }); return s; };
   tree('araucaria', 70, 640, 190); tree('araucaria', 1010, 600, 170); tree('araucaria', 1760, 640, 200); tree('pinheiro', 1640, 620, 120); tree('pinheiro2', 140, 900, 110);
-  tree('ipe_amarelo', 330, 700, 200); tree('ipe_rosa', 1720, 650, 170); tree('arvore_frutifera', 1060, 1330, 160); tree('pinheiro', 40, 1230, 120); tree('araucaria', 1780, 1370, 190); tree('ipe_amarelo', 130, 1375, 160);
+  tree('ipe_amarelo', 330, 700, 200); tree('ipe_rosa', 1720, 650, 170); tree('arvore_frutifera', 1110, 1236, 150); tree('pinheiro', 40, 1230, 120); tree('araucaria', 1780, 1370, 190); tree('ipe_amarelo', 130, 1375, 160);
+  /* mais vegetação da Mantiqueira: araucárias, ipês e pinheiros variados (tamanhos e lados diferentes) */
+  [['araucaria', 270, 560, 150, 1], ['pinheiro2', 520, 600, 96], ['ipe_rosa', 820, 575, 130, 1], ['araucaria', 1180, 560, 140], ['pinheiro', 1400, 600, 100, 1],
+   ['arvore_frutifera', 1560, 575, 118], ['pinheiro', 36, 830, 104, 1], ['araucaria', 1768, 900, 170, 1], ['ipe_amarelo', 1756, 1110, 132],
+   ['pinheiro2', 900, 1372, 100, 1], ['ipe_rosa', 1300, 1376, 124], ['araucaria', 430, 1372, 150]].forEach(a => tree(...a));
   add({ img: IMG.lagoinha, x: 220, y: 860, s: 300 / IMG.lagoinha.width });
   add({ img: IMG.pedras, x: 1740, y: 1310, s: 110 / IMG.pedras.width });
 
@@ -120,12 +129,12 @@ export function buildScene(E, IMG, api) {
   add({ img: IMG.galinheiro, x: 330, y: 1075, s: 250 / IMG.galinheiro.width, onTap: () => api.tap('galinheiro'), tag: 'galinheiro' });
   S.padaria = add({ img: IMG.padaria, x: 1630, y: 930, s: 280 / IMG.padaria.width, onTap: () => api.tap('padaria'), tag: 'padaria' });
   add({ img: IMG.feno, x: 1470, y: 860, s: 70 / IMG.feno.width }); add({ img: IMG.feno, x: 1500, y: 885, s: 64 / IMG.feno.width });
-  add({ img: IMG.carroca, x: 1110, y: 880, s: 110 / IMG.carroca.width });
-  add({ img: IMG.banco, x: 780, y: 880, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 700, y: 905, s: 34 / IMG.lampiao.width });
-  add({ img: IMG.flores, x: 420, y: 850, s: 60 / IMG.flores.width }); add({ img: IMG.flores, x: 1010, y: 870, s: 54 / IMG.flores.width }); add({ img: IMG.flores, x: 720, y: 1230, s: 52 / IMG.flores.width });
+  add({ img: IMG.carroca, x: 1150, y: 985, s: 110 / IMG.carroca.width });
+  add({ img: IMG.banco, x: 790, y: 852, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 968, y: 860, s: 34 / IMG.lampiao.width });
+  add({ img: IMG.flores, x: 420, y: 850, s: 60 / IMG.flores.width }); add({ img: IMG.flores, x: 1080, y: 862, s: 54 / IMG.flores.width }); add({ img: IMG.flores, x: 720, y: 1230, s: 52 / IMG.flores.width });
   add({ img: IMG.tronco, x: 260, y: 1310, s: 80 / IMG.tronco.width });
-  add({ img: IMG.placa, x: 660, y: 1345, s: 100 / IMG.placa.width });
-  add({ img: IMG.caixa, x: 1040, y: 1190, s: 46 / IMG.caixa.width }); add({ img: IMG.cesto, x: 1090, y: 1202, s: 46 / IMG.cesto.width });
+  add({ img: IMG.placa, x: 712, y: 1352, s: 100 / IMG.placa.width });
+  add({ img: IMG.caixa, x: 1040, y: 1190, s: 46 / IMG.caixa.width }); add({ img: IMG.cesto, x: 1000, y: 1208, s: 46 / IMG.cesto.width });
   /* cerca do pasto */
   const fw = 86, cs = fw / IMG.cerca.width;
   for (let x = PASTO.x0 - 20; x < PASTO.x1 + 60; x += fw - 4) add({ img: IMG.cerca, x: x + fw / 2, y: PASTO.y0 - 10, s: cs, z: PASTO.y0 - 40 });
@@ -144,10 +153,11 @@ export function buildScene(E, IMG, api) {
     const st = api.state(), e = P.e || estadoCanteiro(st, P.i, agora()), t = E.t;
     if (e.tipo === 'bloqueado') { soilDiamond(c, P.x, P.y, true); return; }
     const hl = S.plantMode && e.tipo === 'vazio' ? .55 + .45 * Math.sin(t * 5) : 0;
-    const img = e.tipo !== 'vazio' && IMG[`${e.cultura}_${e.fase}`];
+    const key = e.tipo === 'vazio' ? 'canteiro_vazio' : `${e.cultura}_${e.fase}`, img = IMG[key];
     if (!img) { soilDiamond(c, P.x, P.y, false, hl); return; }
+    if (hl) { c.save(); c.globalAlpha = hl; c.fillStyle = 'rgba(255,236,120,.35)'; c.strokeStyle = 'rgba(255,240,150,.95)'; c.lineWidth = 4; const w = PLOT.hw * .98, h = PLOT.hh * .98; c.beginPath(); c.moveTo(P.x, P.y - h); c.lineTo(P.x + w, P.y); c.lineTo(P.x, P.y + h); c.lineTo(P.x - w, P.y); c.closePath(); c.fill(); c.stroke(); c.restore(); }
     /* a imagem da planta já traz o canteiro de terra: encaixa o bico de baixo dela no bico do canteiro */
-    const m = CROPMETA[`${e.cultura}_${e.fase}`], ref = CROPMETA[`${e.cultura}_1`];
+    const m = CROPMETA[key], ref = CROPMETA.canteiro_vazio;
     const k = (PLOT.hw * 2 * .9) / ref.pw * (1 + P.pop * .15);
     const r = e.tipo === 'pronto' ? Math.sin(t * 2.4 + P.i) * .025 : 0;
     c.save(); c.translate(P.x, P.y + PLOT.hh * .9 + 8); c.rotate(r); c.drawImage(img, -m.vx * k, -m.vy * k, img.width * k, img.height * k); c.restore();

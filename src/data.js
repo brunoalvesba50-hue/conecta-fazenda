@@ -9,10 +9,10 @@ export const REGIAO = { id: 'sao-bento', nome: 'São Bento do Sapucaí' };
 export const CULTURAS = {
   milho:   { nome: 'Milho',   semente: 2,  tempo: 60,  rende: 2, venda: 6,  xp: 3, nivel: 1, stages: 5 },
   alface:  { nome: 'Alface',  semente: 3,  tempo: 45,  rende: 2, venda: 7,  xp: 3, nivel: 1, stages: 5 },
-  tomate:  { nome: 'Tomate',  semente: 5,  tempo: 120, rende: 2, venda: 14, xp: 6, nivel: 2, stages: 4 },
-  cenoura: { nome: 'Cenoura', semente: 4,  tempo: 90,  rende: 2, venda: 11, xp: 5, nivel: 3, stages: 4 },
-  morango: { nome: 'Morango', semente: 8,  tempo: 180, rende: 2, venda: 22, xp: 9, nivel: 4, stages: 4 },
-  feijao:  { nome: 'Feijão',  semente: 6,  tempo: 150, rende: 3, venda: 12, xp: 8, nivel: 5, stages: 4 },
+  tomate:  { nome: 'Tomate',  semente: 5,  tempo: 120, rende: 2, venda: 14, xp: 6, nivel: 2, stages: 5 },
+  cenoura: { nome: 'Cenoura', semente: 4,  tempo: 90,  rende: 2, venda: 11, xp: 5, nivel: 3, stages: 5 },
+  morango: { nome: 'Morango', semente: 8,  tempo: 180, rende: 2, venda: 22, xp: 9, nivel: 4, stages: 5 },
+  feijao:  { nome: 'Feijão',  semente: 6,  tempo: 150, rende: 3, venda: 12, xp: 8, nivel: 5, stages: 5 },
 };
 
 /* Produtos que ficam no celeiro (venda = moedas por unidade) */
