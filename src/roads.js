@@ -18,7 +18,10 @@ export const PONTOS = {
   cruzGal:   { x: 604,  y: 1132, tipo: 'cruzamento' },
   galinheiro:{ x: 424,  y: 1104, tipo: 'porta' },
   cruzSul:   { x: 598,  y: 1262, tipo: 'cruzamento' },
-  saida:     { x: 636,  y: 1400, tipo: 'saida' },      // segue para a cidade (fora do mapa)
+  cruzBaixo: { x: 628,  y: 1540, tipo: 'cruzamento' },
+  pomar:     { x: 1000, y: 1628, tipo: 'porta' },      // porteira do pomar
+  lago:      { x: 470,  y: 1716, tipo: 'porta' },      // mirante do lago na mata
+  saida:     { x: 650,  y: 2160, tipo: 'saida' },      // segue para a cidade (fora do mapa)
   pasto:     { x: 1446, y: 1300, tipo: 'porta' },      // porteira do pasto
 };
 
@@ -33,7 +36,10 @@ export const TRECHOS = [
   { de: 'cruzCasa',  ate: 'cruzGal',   via: [[668, 990], [622, 1066]] },
   { de: 'cruzGal',   ate: 'galinheiro',via: [[520, 1124]] },
   { de: 'cruzGal',   ate: 'cruzSul',   via: [[592, 1198]] },
-  { de: 'cruzSul',   ate: 'saida',     via: [[614, 1330]] },
+  { de: 'cruzSul',   ate: 'cruzBaixo', via: [[612, 1340], [620, 1440]] },
+  { de: 'cruzBaixo', ate: 'pomar',     via: [[760, 1588], [890, 1612]] },
+  { de: 'cruzBaixo', ate: 'lago',      via: [[560, 1612]] },
+  { de: 'cruzBaixo', ate: 'saida',     via: [[664, 1720], [668, 1900], [646, 2040]] },
   { de: 'cruzSul',   ate: 'pasto',     via: [[760, 1292], [1000, 1312], [1240, 1306]] },
 ];
 

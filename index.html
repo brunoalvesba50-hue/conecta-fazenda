@@ -7,8 +7,15 @@
 <title>Conecta Fazenda — São Bento do Sapucaí</title>
 <meta name="description" content="Jogo de fazenda na Serra da Mantiqueira. Gratuito, sem dinheiro real.">
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icone-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="screen-orientation" content="landscape">
 </head>
 <body>
+<div id="tela">
 <canvas id="game" aria-label="Fazenda em São Bento do Sapucaí"></canvas>
 
 <div id="hud" class="hidden">
@@ -64,6 +71,8 @@
 
 <div id="loading"><div class="ldBox"><h1>Conecta Fazenda</h1><p>Vale da Mantiqueira</p><div class="ldBar"><i id="ldFill"></i></div><small id="ldTxt">Carregando a fazenda…</small></div></div>
 
+<div id="gireAviso" class="hidden"><div><svg viewBox="0 0 64 64"><rect x="20" y="8" width="24" height="44" rx="5" fill="none" stroke="#fff" stroke-width="3.5"/><path d="M50 40c6-4 8-12 4-19" fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round"/><path d="M57 18l-3 4-4-3" fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Vire o celular de lado</b><small>O Conecta Fazenda é jogado na horizontal</small></div></div>
+</div>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

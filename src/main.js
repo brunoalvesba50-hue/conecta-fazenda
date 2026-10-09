@@ -5,7 +5,7 @@ import { CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, PADARIA, MISS
 import * as G from './game.js';
 import { carregar, salvar, apagarSave } from './state.js';
 
-const IMGS = ['fundo_sao_bento', 'terra', 'cerca', 'cerca_madeira', 'portao', 'araucaria', 'ipe_amarelo', 'ipe_rosa', 'arvore_frutifera', 'pinheiro', 'pinheiro2', 'lagoinha', 'pedras', 'casa', 'celeiro', 'galinheiro', 'poco', 'padaria', 'vaca1', 'vaca2', 'vaca3', 'galinha1', 'galinha2', 'p_idle', 'p_plantando', 'p_colhendo', 'p_acenando', 'canteiro_vazio', 'cesto', 'caixa', 'saco', 'banco', 'lampiao', 'placa', 'carroca', 'feno', 'flores', 'tronco'];
+const IMGS = ['fundo_sao_bento', 'terra', 'cerca', 'cerca_madeira', 'portao', 'araucaria', 'ipe_amarelo', 'ipe_rosa', 'arvore_frutifera', 'pinheiro', 'pinheiro2', 'lagoinha', 'pedras', 'casa', 'celeiro', 'galinheiro', 'poco', 'padaria', 'vaca1', 'vaca2', 'vaca3', 'galinha1', 'galinha2', 'p_idle', 'p_plantando', 'p_colhendo', 'p_acenando', 'canteiro_vazio', 'curral', 'deposito', 'silo', 'cesto', 'caixa', 'saco', 'banco', 'lampiao', 'placa', 'carroca', 'feno', 'flores', 'tronco'];
 for (const [k, c] of Object.entries(CULTURAS)) for (let i = 1; i <= c.stages; i++) IMGS.push(`${k}_${i}`);
 for (const p of Object.values(PRODUTOS)) if (!IMGS.includes(p.icone)) IMGS.push(p.icone);
 const manifest = Object.fromEntries(IMGS.map(n => [n, `assets/img/${n}.webp`]));
@@ -215,6 +215,9 @@ const api = {
     else if (o === 'galinheiro') painelAnimais();
     else if (o === 'fazendeiro') { S.farmerPose('p_acenando', 1400); toast('Bem-vindo a São Bento do Sapucaí!'); }
     else if (o === 'poco') toast('Água fresquinha da serra.');
+    else if (o === 'curral') painelAnimais();
+    else if (o === 'deposito') painelCeleiro();
+    else if (o === 'silo') toast('Silo da fazenda: em breve guardará a ração dos animais.');
   },
 };
 
@@ -232,13 +235,52 @@ $('bMissoes').onclick = () => painelMissoes('missoes');
 $('mChip').onclick = () => { const m = G.missaoAtual(st); if (m && m.completa) ACOES.resgatar(); else painelMissoes('missoes'); };
 /* zoom: botões (o gesto de pinça e a roda do mouse estão no engine.js) */
 const FAZENDA = { x: 900, y: 980 };
-function visaoInicial() { const cel = E.vw < 700; return { x: cel ? 860 : 900, y: 30 + E.vh / (cel ? .68 : .74) / 2, z: Math.max(E.coverZoom, cel ? .68 : .74) }; }
+/* enquadramento inicial: na vertical mostra a largura principal da fazenda (da casa ao celeiro)
+   e aproveita a altura (Pedra do Baú → fazenda → pasto → parte de baixo); na horizontal, como antes */
+function visaoInicial() {
+  const retrato = E.vh > E.vw * 1.1;
+  if (retrato) { const z = Math.min(E.maxZoom, Math.max(E.minZoom, E.vw / 1120)); return { x: 916, y: 20 + E.vh / z / 2, z }; }
+  if (E.vh <= 520) {
+    /* celular de lado: casa, celeiro, canteiros e animais na tela de uma vez */
+    const z = Math.min(E.maxZoom, Math.max(E.coverZoom, Math.min(E.vw / 1150, E.vh / 880))), alt = E.vh / z;
+    return { x: 905, y: Math.max(20, 1185 - (E.vh - 66) / z) + alt / 2, z };
+  }
+  const cel = E.vw < 700, z = Math.max(E.coverZoom, cel ? .68 : .74);
+  return { x: cel ? 860 : 900, y: 30 + E.vh / z / 2, z };
+}
+let mexeu = false; ['pointerdown', 'wheel'].forEach(t => $('game').addEventListener(t, () => { mexeu = true; }, { passive: true }));
 $('zIn').onclick = () => E.zoomTo(E.cam.zoom * 1.35);
 $('zOut').onclick = () => E.zoomTo(E.cam.zoom / 1.35);
 $('zAll').onclick = () => E.flyTo(WORLD.w / 2, WORLD.h / 2, E.minZoom);
 $('zHome').onclick = () => { const v = visaoInicial(); E.flyTo(v.x, v.y, v.z); };
 setInterval(() => { if (!E) return; $('zIn').disabled = E.cam.zoom >= E.maxZoom - .001; $('zOut').disabled = E.cam.zoom <= E.minZoom + .001; }, 300);
 $('bCeleiro').onclick = painelCeleiro; $('bMapa').onclick = painelMapa; $('bConfig').onclick = painelAjustes; $('bGanhar').onclick = painelGanhar;
+
+/* ---------- sempre na horizontal ----------
+   Celular em pé: o jogo inteiro aparece girado 90° (é só virar o celular), como nos jogos de loja.
+   Celular deitado: normal. No Android, ao tocar a primeira vez, entra em tela cheia e trava de lado. */
+const toque = (() => { try { return matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window; } catch (_) { return false; } })();
+let girado = null;
+function avisoGire() { const a = $('gireAviso'); a.classList.remove('hidden'); a.style.animation = 'none'; void a.offsetWidth; a.style.animation = ''; clearTimeout(avisoGire.t); avisoGire.t = setTimeout(() => a.classList.add('hidden'), 2700); }
+function ajustaTela() {
+  const iw = window.innerWidth, ih = window.innerHeight, g = toque && ih > iw;
+  const W = g ? ih : iw, H = g ? iw : ih, b = document.body, r = document.documentElement.style;
+  b.classList.toggle('girado', g); b.classList.toggle('compacto', H <= 520); b.classList.toggle('estreito', W <= 480);
+  r.setProperty('--W', W + 'px'); r.setProperty('--H', H + 'px');
+  if (g && girado === false && E) avisoGire();
+  const mudou = girado !== null && girado !== g; girado = g;
+  if (E) { E.resize(); if (!mexeu || mudou) { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); } }
+}
+ajustaTela();
+['resize', 'orientationchange'].forEach(t => window.addEventListener(t, () => setTimeout(ajustaTela, 60)));
+if (window.visualViewport) visualViewport.addEventListener('resize', () => setTimeout(ajustaTela, 60));
+const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (toque && !ios) document.addEventListener('pointerdown', function trava() {
+  document.removeEventListener('pointerdown', trava);
+  const el = document.documentElement;
+  try { (el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : Promise.reject()).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => {}); } catch (_) {}
+}, { once: true });
+window.CF_tela = () => ({ girado, W: girado ? innerHeight : innerWidth, H: girado ? innerWidth : innerHeight });
 
 /* ---------- início ---------- */
 (async function () {
@@ -249,9 +291,10 @@ $('bCeleiro').onclick = painelCeleiro; $('bMapa').onclick = painelMapa; $('bConf
   E = new Engine($('game'), WORLD);
   S = buildScene(E, IMG, api);
   { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); }
-  window.CF = { get st() { return st; }, E, S, G, WORLD, salvar: salvarJa };
+  window.CF = { get st() { return st; }, E, S, G, WORLD, salvar: salvarJa, pagina: (x, y) => girado ? [innerWidth - y, x] : [x, y] };
   $('hud').classList.remove('hidden'); atualizaHud();
   $('loading').remove();
+  if (girado) avisoGire();
   if (c.aviso) toast(c.aviso, true);
   else if (c.novo) setTimeout(() => toast('Bem-vindo! Toque em um canteiro para plantar.'), 400);
 })();

@@ -6,7 +6,8 @@ import { estadoCanteiro, estadoAnimal, estadoPadaria, fmtTempo, agora } from './
 import { CROPMETA } from './cropmeta.js';
 import { desenhaEstradas } from './roads.js';
 
-export const WORLD = { w: 1800, h: 1380 };
+/* mapa mais alto para aproveitar o celular na vertical: em cima a fazenda, embaixo a mata, o pomar e a saída para a cidade */
+export const WORLD = { w: 1800, h: 2100 };
 const GROUND_TOP = 440;
 const PLOT = { cx: 880, cy: 1040, hw: 80, hh: 46 };
 export const PASTO = { x0: 1190, y0: 1030, x1: 1700, y1: 1240 };
@@ -119,6 +120,22 @@ export function buildScene(E, IMG, api) {
   [['araucaria', 270, 560, 150, 1], ['pinheiro2', 520, 600, 96], ['ipe_rosa', 820, 575, 130, 1], ['araucaria', 1180, 560, 140], ['pinheiro', 1400, 600, 100, 1],
    ['arvore_frutifera', 1560, 575, 118], ['pinheiro', 36, 830, 104, 1], ['araucaria', 1768, 900, 170, 1], ['ipe_amarelo', 1756, 1110, 132],
    ['pinheiro2', 900, 1372, 100, 1], ['ipe_rosa', 1300, 1376, 124], ['araucaria', 430, 1372, 150]].forEach(a => tree(...a));
+  /* ---- parte de baixo: mata com lago, curral, pomar com galpão e silo ---- */
+  [['araucaria', 90, 1620, 170], ['pinheiro2', 330, 1600, 100, 1], ['pinheiro', 56, 1790, 110], ['araucaria', 170, 2010, 190, 1], ['ipe_rosa', 540, 1930, 140],
+   ['araucaria', 420, 2000, 160], ['pinheiro', 250, 2080, 100, 1], ['ipe_amarelo', 860, 1500, 120, 1], ['pinheiro2', 880, 2060, 96],
+   ['araucaria', 1770, 2060, 180], ['pinheiro', 1560, 2080, 104, 1]].forEach(a => tree(...a));
+  add({ img: IMG.lagoinha, x: 250, y: 1860, s: 330 / IMG.lagoinha.width, flip: true });
+  add({ img: IMG.pedras, x: 470, y: 1810, s: 90 / IMG.pedras.width, flip: true });
+  add({ img: IMG.tronco, x: 330, y: 1960, s: 76 / IMG.tronco.width, flip: true });
+  add({ img: IMG.flores, x: 560, y: 1700, s: 50 / IMG.flores.width }); add({ img: IMG.flores, x: 760, y: 1990, s: 50 / IMG.flores.width });
+  add({ img: IMG.curral, x: 1450, y: 1510, s: 230 / IMG.curral.width, tag: 'curral', onTap: () => api.tap('curral') });
+  add({ img: IMG.deposito, x: 1650, y: 1700, s: 220 / IMG.deposito.width, tag: 'deposito', onTap: () => api.tap('deposito') });
+  add({ img: IMG.silo, x: 1730, y: 1900, s: 96 / IMG.silo.width, tag: 'silo', onTap: () => api.tap('silo') });
+  add({ img: IMG.feno, x: 1560, y: 1760, s: 64 / IMG.feno.width }); add({ img: IMG.feno, x: 1596, y: 1784, s: 58 / IMG.feno.width });
+  /* pomar: árvores em fileiras, com tamanhos e lados variados (não parecem coladas) */
+  add({ img: IMG.portao, x: 1004, y: 1640, s: 80 / IMG.portao.width });
+  for (let x = 1060; x < 1500; x += 82) { add({ img: IMG.cerca, x, y: 1640, s: 84 / IMG.cerca.width, z: 1600 }); add({ img: IMG.cerca, x: x - 30, y: 2010, s: 84 / IMG.cerca.width }); }
+  [[1090, 1760], [1220, 1748], [1350, 1764], [1470, 1752], [1150, 1876], [1280, 1866], [1410, 1880], [1090, 1990], [1220, 1984], [1350, 1994]].forEach(([x, y], i) => tree('arvore_frutifera', x, y, 112 + (i * 37 % 26), i % 2));
   add({ img: IMG.lagoinha, x: 220, y: 860, s: 300 / IMG.lagoinha.width });
   add({ img: IMG.pedras, x: 1740, y: 1310, s: 110 / IMG.pedras.width });
 
@@ -133,7 +150,7 @@ export function buildScene(E, IMG, api) {
   add({ img: IMG.banco, x: 790, y: 852, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 968, y: 860, s: 34 / IMG.lampiao.width });
   add({ img: IMG.flores, x: 420, y: 850, s: 60 / IMG.flores.width }); add({ img: IMG.flores, x: 1080, y: 862, s: 54 / IMG.flores.width }); add({ img: IMG.flores, x: 720, y: 1230, s: 52 / IMG.flores.width });
   add({ img: IMG.tronco, x: 260, y: 1310, s: 80 / IMG.tronco.width });
-  add({ img: IMG.placa, x: 712, y: 1352, s: 100 / IMG.placa.width });
+  add({ img: IMG.placa, x: 742, y: 2050, s: 100 / IMG.placa.width });
   add({ img: IMG.caixa, x: 1040, y: 1190, s: 46 / IMG.caixa.width }); add({ img: IMG.cesto, x: 1000, y: 1208, s: 46 / IMG.cesto.width });
   /* cerca do pasto */
   const fw = 86, cs = fw / IMG.cerca.width;

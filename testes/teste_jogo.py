@@ -26,7 +26,7 @@ def run(viewport, mobile):
         T[0] = int(ev("Date.now()"))
         tag = 'celular' if mobile else 'computador'
         def tela(wx, wy):
-            return ev(f"(()=>{{const s=CF.E.toScreen({wx},{wy});return [s.x,s.y]}})()")
+            return ev(f"(()=>{{const s=CF.E.toScreen({wx},{wy});return CF.pagina(s.x,s.y)}})()")
         def toque_mundo(wx, wy):
             ev(f"CF.E.centerOn({wx},{wy})"); pg.wait_for_timeout(120)
             x, y = tela(wx, wy); pg.mouse.click(x, y); pg.wait_for_timeout(300)
@@ -161,9 +161,9 @@ def run_mapa(viewport, mobile):
         pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); ev("localStorage.clear()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(600)
         tag = 'mapa-celular' if mobile else 'mapa-computador'
         cam = lambda: ev("({x:CF.E.cam.x,y:CF.E.cam.y,z:CF.E.cam.zoom})")
-        PE = """((pts,type)=>{const cv=document.getElementById('game');for(const q of pts){cv.dispatchEvent(new PointerEvent(type,{pointerId:q[0],clientX:q[1],clientY:q[2],bubbles:true,pointerType:'touch',isPrimary:q[0]===1,button:0,buttons:type==='pointerup'?0:1}))}})"""
+        PE = """((pts,type)=>{const cv=document.getElementById('game');for(const q of pts){const [px,py]=CF.pagina(q[1],q[2]);cv.dispatchEvent(new PointerEvent(type,{pointerId:q[0],clientX:px,clientY:py,bubbles:true,pointerType:'touch',isPrimary:q[0]===1,button:0,buttons:type==='pointerup'?0:1}))}})"""
         def ptr(pts, t): ev(PE + f"({json.dumps(pts)},'{t}')")
-        W, H = viewport['width'], viewport['height']
+        W, H = ev('CF.E.vw'), ev('CF.E.vh')
         # 1) arrastar com um dedo
         ev("CF.E.setZoom(1);CF.E.centerOn(900,800)"); c0 = cam(); fic0 = json.dumps(ev("CF.st.canteiros"))
         ptr([[1, W/2, H/2]], 'pointerdown')
@@ -191,7 +191,7 @@ def run_mapa(viewport, mobile):
         z = cam()['z']; pg.click('#zOut', force=True); pg.wait_for_timeout(500)
         check(f'[{tag}] botão − afasta', cam()['z'] < z * .85)
         pg.click('#zAll', force=True); pg.wait_for_timeout(800)
-        vis = ev("(()=>{const a=CF.E.toScreen(0,0),b=CF.E.toScreen(CF.WORLD.w,CF.WORLD.h);return [a.x,a.y,b.x,b.y,innerWidth,innerHeight]})()")
+        vis = ev("(()=>{const a=CF.E.toScreen(0,0),b=CF.E.toScreen(CF.WORLD.w,CF.WORLD.h);return [a.x,a.y,b.x,b.y,CF.E.vw,CF.E.vh]})()")
         check(f'[{tag}] visão geral mostra a fazenda inteira', vis[0] >= -2 and vis[2] <= vis[4] + 2 and vis[1] >= -2 and vis[3] <= vis[5] + 62, vis)
         pg.click('#zOut', force=True); pg.wait_for_timeout(500)
         check(f'[{tag}] não afasta além da visão geral', abs(cam()['z'] - ev("CF.E.minZoom")) < .001)
@@ -203,7 +203,7 @@ def run_mapa(viewport, mobile):
         # 4) canteiro continua tocável no zoom máximo e no mínimo
         for zz in ['CF.E.maxZoom', 'CF.E.minZoom*1.05']:
             ev(f"CF.E.setZoom({zz});CF.E.centerOn(800,994)"); pg.wait_for_timeout(150)
-            x, y = ev("(()=>{const s=CF.E.toScreen(800,994);return [s.x,s.y]})()")
+            x, y = ev("(()=>{const s=CF.E.toScreen(800,994);return CF.pagina(s.x,s.y)})()")
             antes = ev("CF.st.canteiros[3].cultura")
             pg.mouse.click(x, y); pg.wait_for_timeout(300)
             aberto = not ev("document.getElementById('sheet').classList.contains('hidden')")
@@ -222,7 +222,7 @@ def run_mapa(viewport, mobile):
           const nomes=Object.keys(m.PONTOS);const viz={};nomes.forEach(n=>viz[n]=[]);m.TRECHOS.forEach(t=>{viz[t.de].push(t.ate);viz[t.ate].push(t.de)});
           const vis=new Set([nomes[0]]);const fila=[nomes[0]];while(fila.length){const a=fila.pop();for(const b of viz[a])if(!vis.has(b)){vis.add(b);fila.push(b)}}
           const pontas=g.every(s=>{const a=m.PONTOS[s.de],b=m.PONTOS[s.ate],p0=s.pts[0],p1=s.pts[s.pts.length-1];return Math.hypot(p0[0]-a.x,p0[1]-a.y)<1&&Math.hypot(p1[0]-b.x,p1[1]-b.y)<1});
-          const tags=['casa','celeiro','padaria','galinheiro'];const blocos=CF.E.sprites.filter(s=>tags.includes(s.tag)).map(s=>{const b=s.bounds();return {tag:s.tag,x0:b.x+b.w*.08,x1:b.x+b.w*.92,y0:b.y+b.h*.3,y1:b.y+b.h-18}});
+          const tags=['casa','celeiro','padaria','galinheiro','curral','deposito','silo'];const blocos=CF.E.sprites.filter(s=>tags.includes(s.tag)).map(s=>{const b=s.bounds();return {tag:s.tag,x0:b.x+b.w*.08,x1:b.x+b.w*.92,y0:b.y+b.h*.3,y1:b.y+b.h-18}});
           const poco=CF.E.sprites.find(s=>s.img&&s.img.src.includes('poco'));if(poco){const b=poco.bounds();blocos.push({tag:'poco',x0:b.x+10,x1:b.x+b.w-10,y0:b.y+b.h*.3,y1:b.y+b.h-12})}
           const invade=[];for(const s of g)for(const q of s.pts)for(const k of blocos){if(q[0]>k.x0&&q[0]<k.x1&&q[1]>k.y0&&q[1]<k.y1)invade.push(k.tag+':'+s.de+'>'+s.ate)}
           let maxPasso=0;for(const s of g)for(let i=1;i<s.pts.length;i++)maxPasso=Math.max(maxPasso,Math.hypot(s.pts[i][0]-s.pts[i-1][0],s.pts[i][1]-s.pts[i-1][1]));
@@ -231,7 +231,7 @@ def run_mapa(viewport, mobile):
         check(f'[{tag}] estradas: nenhum trecho repetido', R['dup'] == 0)
         check(f'[{tag}] estradas: rede toda ligada, sem ponto solto', R['ligado'] and not R['soltos'], R['soltos'])
         check(f'[{tag}] estradas: cada trecho começa e termina num ponto da rede', R['pontas'])
-        check(f'[{tag}] estradas: não atravessam casa, celeiro, padaria, galinheiro nem poço', not R['invade'], R['invade'][:5])
+        check(f'[{tag}] estradas: não atravessam casa, celeiro, padaria, galinheiro, curral, galpão, silo nem poço', not R['invade'], R['invade'][:5])
         check(f'[{tag}] estradas: curvas suaves (sem quinas)', R['maxPasso'] < 12 and R['maxCurva'] < .5, (round(R['maxPasso'], 1), round(R['maxCurva'], 2)))
         pg.screenshot(path=f'/tmp/claude-0/cft/{tag}.png')
         check(f'[{tag}] sem erros de script', not errs, errs[:3])
@@ -257,5 +257,34 @@ def run_extras():
         check('[computador] mãozinha em cima do celeiro', pg2.evaluate("document.getElementById('game').style.cursor") == 'pointer')
         b.close()
 run_extras()
+
+def run_horizontal():
+    for (w, h) in [(360, 640), (375, 667), (390, 844), (430, 932), (844, 390), (667, 375), (932, 430)]:
+        with sync_playwright() as p:
+            b = p.chromium.launch(executable_path=CHROME)
+            ctx = b.new_context(viewport={'width': w, 'height': h}, has_touch=True, is_mobile=True, device_scale_factor=2)
+            pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+            pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(500)
+            tag = f'[celular {"em pé" if h > w else "deitado"} {w}x{h}]'
+            R = pg.evaluate("""(()=>{const vis=(b)=>{const a=CF.E.toScreen(b.x,b.y),c=CF.E.toScreen(b.x+b.w,b.y+b.h);return a.x>=-2&&c.x<=CF.E.vw+2&&a.y>=-2&&c.y<=CF.E.vh+2};
+              const ok=(x,y)=>{const s=CF.E.toScreen(x,y);return s.x>0&&s.x<CF.E.vw&&s.y>0&&s.y<CF.E.vh-60};
+              return {gir:document.body.classList.contains('girado'),land:CF.E.vw>CF.E.vh,casa:vis(CF.S.casa.bounds()),cel:vis(CF.S.celeiro.bounds()),
+                pl:CF.S.plots.slice(0,6).every(P=>ok(P.x,P.y)),uniforme:CF.E.sprites.every(s=>!s.img||Math.abs(s.sx-s.sy)<.03),
+                barra:(()=>{const r=document.querySelector('.bottom').getBoundingClientRect();return r.left>=-1&&r.top>=-1&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1})()}})()""")
+            check(f'{tag} jogo aparece na horizontal' + (' (girado)' if h > w else ''), R['land'] and R['gir'] == (h > w), R)
+            check(f'{tag} casa, celeiro e canteiros na tela ao abrir', R['casa'] and R['cel'] and R['pl'], R)
+            check(f'{tag} nada esticado e barra de botões dentro da tela', R['uniforme'] and R['barra'])
+            x, y = pg.evaluate("(()=>{const P=CF.S.plots[0];const s=CF.E.toScreen(P.x,P.y);return CF.pagina(s.x,s.y)})()")
+            pg.touchscreen.tap(x, y); pg.wait_for_timeout(400)
+            check(f'{tag} tocar no canteiro funciona (abre as sementes)', not pg.evaluate("document.getElementById('sheet').classList.contains('hidden')"))
+            pg.click('#shClose', force=True); pg.wait_for_timeout(200)
+            pg.evaluate("CF.E.setZoom(1);CF.E.centerOn(900,900)"); pg.wait_for_timeout(100)
+            c0 = pg.evaluate("CF.E.cam.x"); x0, y0 = pg.evaluate("CF.pagina(CF.E.vw/2,CF.E.vh/2)"); x1, y1 = pg.evaluate("CF.pagina(CF.E.vw/2-100,CF.E.vh/2)")
+            pg.evaluate(f"""(()=>{{const cv=document.getElementById('game');const f=(t,x,y)=>cv.dispatchEvent(new PointerEvent(t,{{pointerId:1,clientX:x,clientY:y,bubbles:true,pointerType:'touch',isPrimary:true,buttons:t==='pointerup'?0:1}}));
+              f('pointerdown',{x0},{y0});for(let k=1;k<=10;k++)f('pointermove',{x0}+({x1}-{x0})*k/10,{y0}+({y1}-{y0})*k/10);f('pointerup',{x1},{y1})}})()""")
+            check(f'{tag} arrastar para o lado move o mapa no sentido certo', abs(pg.evaluate("CF.E.cam.x") - c0 - 100 / pg.evaluate("CF.E.cam.zoom")) < 3, pg.evaluate("CF.E.cam.x") - c0)
+            check(f'{tag} sem erros de script', not errs, errs[:2])
+            b.close()
+run_horizontal()
 
 print(f"\n{len(res)} testes no total, {sum(1 for r in res if not r[1])} falhas")

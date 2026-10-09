@@ -36,8 +36,8 @@ export class Engine {
   remove(s) { const i = this.sprites.indexOf(s); if (i >= 0) this.sprites.splice(i, 1); }
 
   resize() {
-    const r = this.cv.getBoundingClientRect();
-    this.vw = Math.max(1, r.width); this.vh = Math.max(1, r.height);
+    /* tamanho do desenho (sem o giro da tela): clientWidth/Height não mudam quando o jogo está girado */
+    this.vw = Math.max(1, this.cv.clientWidth); this.vh = Math.max(1, this.cv.clientHeight);
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.cv.width = Math.round(this.vw * this.dpr); this.cv.height = Math.round(this.vh * this.dpr);
     /* menor zoom = mapa inteiro cabe na tela (visão geral); maior = detalhes das plantas e casas */
@@ -136,12 +136,18 @@ export class Engine {
     }
     return null;
   }
+  /* ponto do dedo/mouse em coordenadas do jogo. Com o celular em pé, o jogo inteiro é girado 90°
+     (fica de lado); então x do jogo = y da página e y do jogo = largura da página − x */
+  _pos(e) {
+    if (document.body.classList.contains('girado')) return { x: e.clientY, y: window.innerWidth - e.clientX };
+    const r = this.cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
   _bind() {
     const cv = this.cv;
-    cv.addEventListener('pointerdown', e => { if (e.button > 0) return; try { cv.setPointerCapture(e.pointerId); } catch (_) {} this._zt = null; this._fly = null; if (!this._ptr.size) this._gesto = false; this._ptr.set(e.pointerId, { x: e.offsetX, y: e.offsetY, x0: e.offsetX, y0: e.offsetY, t: performance.now() }); if (this._ptr.size >= 2) { this._gesto = true; this._pinch = this._pinchInfo(); } });
+    cv.addEventListener('pointerdown', e => { if (e.button > 0) return; const q = this._pos(e); try { cv.setPointerCapture(e.pointerId); } catch (_) {} this._zt = null; this._fly = null; if (!this._ptr.size) this._gesto = false; this._ptr.set(e.pointerId, { x: q.x, y: q.y, x0: q.x, y0: q.y, t: performance.now() }); if (this._ptr.size >= 2) { this._gesto = true; this._pinch = this._pinchInfo(); } });
     cv.addEventListener('pointermove', e => {
       const p = this._ptr.get(e.pointerId); if (!p) return;
-      const dx = e.offsetX - p.x, dy = e.offsetY - p.y; p.x = e.offsetX; p.y = e.offsetY;
+      const q = this._pos(e), dx = q.x - p.x, dy = q.y - p.y; p.x = q.x; p.y = q.y;
       if (this._ptr.size >= 2 && this._pinch) {
         /* pinça: o ponto do mapa que estava entre os dedos continua entre os dedos */
         const n = this._pinchInfo(), o = this._pinch;
@@ -153,18 +159,18 @@ export class Engine {
         this._pinch = n; p.moved = true; return;
       }
       if (this._gesto && this._ptr.size === 1 && !p.moved) p.moved = true;
-      if (Math.hypot(e.offsetX - p.x0, e.offsetY - p.y0) > 8) p.moved = true;
+      if (Math.hypot(q.x - p.x0, q.y - p.y0) > 8) p.moved = true;
       if (p.moved) { this.cam.x -= dx / this.cam.zoom; this.cam.y -= dy / this.cam.zoom; this.clamp(); }
     });
     const up = e => {
       const p = this._ptr.get(e.pointerId); this._ptr.delete(e.pointerId); if (this._ptr.size < 2) this._pinch = null;
       /* tocar só conta se foi um dedo só, sem arrastar e sem pinça antes (zoom nunca planta/colhe) */
       if (!p || p.moved || e.type === 'pointercancel' || this._ptr.size || this._gesto) { if (!this._ptr.size) this._gesto = false; return; }
-      const w = this.toWorld(e.offsetX, e.offsetY), s = this.pick(w.x, w.y);
+      const q = this._pos(e), w = this.toWorld(q.x, q.y), s = this.pick(w.x, w.y);
       if (s) s.onTap(s, w); else if (this.onTapEmpty) this.onTapEmpty(w);
     };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    cv.addEventListener('wheel', e => { e.preventDefault(); this._zt = null; this._fly = null; const f = Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * (e.ctrlKey ? .012 : .0025)); this.setZoom(this.cam.zoom * f, e.offsetX, e.offsetY); }, { passive: false });
+    cv.addEventListener('wheel', e => { e.preventDefault(); this._zt = null; this._fly = null; const f = Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * (e.ctrlKey ? .012 : .0025)); const q = this._pos(e); this.setZoom(this.cam.zoom * f, q.x, q.y); }, { passive: false });
     cv.addEventListener('contextmenu', e => e.preventDefault());
     /* Safari do iPhone: impede o zoom da página inteira (gesto nativo), deixando só o zoom do mapa */
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
@@ -174,7 +180,7 @@ export class Engine {
     cv.addEventListener('pointermove', e => {
       if (e.pointerType !== 'mouse' || this._ptr.size) return;
       const n = performance.now(); if (n - (this._hov || 0) < 60) return; this._hov = n;
-      const w = this.toWorld(e.offsetX, e.offsetY); cv.style.cursor = this.pick(w.x, w.y) ? 'pointer' : 'grab';
+      const q = this._pos(e), w = this.toWorld(q.x, q.y); cv.style.cursor = this.pick(w.x, w.y) ? 'pointer' : 'grab';
     });
   }
   _pinchInfo() { const a = [...this._ptr.values()]; if (a.length < 2) return { d: 0, cx: 0, cy: 0 }; return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), cx: (a[0].x + a[1].x) / 2, cy: (a[0].y + a[1].y) / 2 }; }
