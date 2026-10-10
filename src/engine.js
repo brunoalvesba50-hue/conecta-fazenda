@@ -42,7 +42,8 @@ export class Engine {
     this.cv.width = Math.round(this.vw * this.dpr); this.cv.height = Math.round(this.vh * this.dpr);
     /* menor zoom = mapa inteiro cabe na tela (visão geral); maior = detalhes das plantas e casas */
     this.coverZoom = Math.max(this.vw / this.world.w, this.vh / this.world.h);
-    this.minZoom = Math.min(this.vw / this.world.w, this.vh / this.world.h) * .98;
+    /* zoom mínimo = o mapa ainda cobre a tela inteira: nunca aparece nada fora do mapa (céu vazio, bordas) */
+    this.minZoom = this.coverZoom;
     this.maxZoom = Math.max(1.7, this.coverZoom * 2.6);
     this.setZoom(this.cam.zoom || 1); this.clamp();
   }

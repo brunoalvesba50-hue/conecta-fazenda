@@ -284,6 +284,9 @@ function ajustaTela() {
 ajustaTela();
 ['resize', 'orientationchange'].forEach(t => window.addEventListener(t, () => setTimeout(ajustaTela, 60)));
 if (window.visualViewport) visualViewport.addEventListener('resize', () => setTimeout(ajustaTela, 60));
+/* Safari: se a página rolar sozinha (barra de endereço, teclado), volta para o topo para a interface não sumir */
+const semRolar = () => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); };
+window.addEventListener('scroll', semRolar, { passive: true }); if (window.visualViewport) visualViewport.addEventListener('scroll', semRolar);
 window.CF_tela = () => ({ girado: false, W: innerWidth, H: innerHeight });
 
 /* ---------- início ---------- */

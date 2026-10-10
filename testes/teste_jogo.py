@@ -193,11 +193,17 @@ def run_mapa(viewport, mobile):
         check(f'[{tag}] botão − afasta', cam()['z'] < z * .85)
         pg.click('#zAll', force=True); pg.wait_for_timeout(800)
         vis = ev("(()=>{const a=CF.E.toScreen(0,0),b=CF.E.toScreen(CF.WORLD.w,CF.WORLD.h);return [a.x,a.y,b.x,b.y,CF.E.vw,CF.E.vh]})()")
-        check(f'[{tag}] visão geral mostra a fazenda inteira', vis[0] >= -2 and vis[2] <= vis[4] + 2 and vis[1] >= -2 and vis[3] <= vis[5] + 62, vis)
+        check(f'[{tag}] visão geral: o mapa cobre a tela toda (nada vazio fora do mapa)', vis[0] <= .5 and vis[1] <= .5 and vis[2] >= vis[4] - .5 and vis[3] >= vis[5] - .5, vis)
+        # pinça para afastar ao máximo e arrastar para os cantos: continua sem nada fora do mapa
+        for dx, dy in [(-3000, -3000), (3000, 3000), (-3000, 3000), (3000, -3000)]:
+            ev(f"CF.E.cam.x+={dx};CF.E.cam.y+={dy};CF.E.clamp()")
+            v2 = ev("(()=>{const a=CF.E.toScreen(0,0),b=CF.E.toScreen(CF.WORLD.w,CF.WORLD.h);return a.x<=.5&&a.y<=.5&&b.x>=CF.E.vw-.5&&b.y>=CF.E.vh-.5})()")
+            if not v2: break
+        check(f'[{tag}] afastado e arrastado até os cantos: nunca aparece área vazia', v2)
         pg.click('#zOut', force=True); pg.wait_for_timeout(500)
         check(f'[{tag}] não afasta além da visão geral', abs(cam()['z'] - ev("CF.E.minZoom")) < .001)
         pg.click('#zHome', force=True); pg.wait_for_timeout(800)
-        check(f'[{tag}] botão centralizar volta para a fazenda', cam()['z'] > ev("CF.E.minZoom") * 1.05)
+        check(f'[{tag}] botão centralizar volta para a fazenda', ev("(()=>{const s=CF.E.toScreen(880,1000);return s.x>0&&s.x<CF.E.vw&&s.y>0&&s.y<CF.E.vh})()"))
         for _ in range(12): pg.click('#zIn', force=True); pg.wait_for_timeout(80)
         pg.wait_for_timeout(400)
         check(f'[{tag}] limite máximo de zoom', abs(cam()['z'] - ev("CF.E.maxZoom")) < .001 and ev("document.getElementById('zIn').disabled"))

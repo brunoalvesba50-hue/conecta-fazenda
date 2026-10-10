@@ -7,7 +7,7 @@ import { CROPMETA } from './cropmeta.js';
 import { desenhaEstradas } from './roads.js';
 
 /* mapa mais alto para aproveitar o celular na vertical: em cima a fazenda, embaixo a mata, o pomar e a saída para a cidade */
-export const WORLD = { w: 1800, h: 2100 };
+export const WORLD = { w: 1800, h: 2340 };
 const GROUND_TOP = 440;
 const PLOT = { cx: 880, cy: 1040, hw: 80, hh: 46 };
 export const PASTO = { x0: 1190, y0: 1030, x1: 1700, y1: 1240 };
@@ -123,7 +123,10 @@ export function buildScene(E, IMG, api) {
   /* ---- parte de baixo: mata com lago, curral, pomar com galpão e silo ---- */
   [['araucaria', 90, 1620, 170], ['pinheiro2', 330, 1600, 100, 1], ['pinheiro', 56, 1790, 110], ['araucaria', 170, 2010, 190, 1], ['ipe_rosa', 540, 1930, 140],
    ['araucaria', 420, 2000, 160], ['pinheiro', 250, 2080, 100, 1], ['ipe_amarelo', 860, 1500, 120, 1], ['pinheiro2', 880, 2060, 96],
-   ['araucaria', 1770, 2060, 180], ['pinheiro', 1560, 2080, 104, 1]].forEach(a => tree(...a));
+   ['araucaria', 1770, 2060, 180], ['pinheiro', 1560, 2080, 104, 1],
+   /* faixa de mata no fim do mapa (para o celular em pé poder afastar sem mostrar área vazia) */
+   ['araucaria', 80, 2240, 180, 1], ['ipe_amarelo', 300, 2290, 140], ['pinheiro2', 470, 2250, 100], ['araucaria', 960, 2280, 170, 1], ['ipe_rosa', 1180, 2250, 130],
+   ['pinheiro', 1360, 2300, 110, 1], ['araucaria', 1560, 2270, 180], ['arvore_frutifera', 1740, 2250, 120, 1], ['pinheiro', 820, 2180, 96]].forEach(a => tree(...a));
   add({ img: IMG.lagoinha, x: 250, y: 1860, s: 330 / IMG.lagoinha.width, flip: true });
   add({ img: IMG.pedras, x: 470, y: 1810, s: 90 / IMG.pedras.width, flip: true });
   add({ img: IMG.tronco, x: 330, y: 1960, s: 76 / IMG.tronco.width, flip: true });

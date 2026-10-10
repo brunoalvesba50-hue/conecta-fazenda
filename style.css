@@ -2,7 +2,7 @@
 /* tela do jogo: --W/--H = tamanho útil da tela (prioridade: celular na vertical) */
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);--W:100vw;--H:100vh}
 #tela{position:fixed;left:0;top:0;width:var(--W);height:var(--H);overflow:hidden}
-html,body{margin:0;height:100%;overflow:hidden;background:#3c6b2c;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#3a2a10;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;width:100%;background:#3c6b2c;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#3a2a10;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
 #game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .hidden{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer}
