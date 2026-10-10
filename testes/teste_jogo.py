@@ -21,8 +21,8 @@ def run(viewport, mobile):
         pg.clock.resume()
         def avanca(seg):
             T[0] = int(ev('Date.now()')) + int(seg * 1000); pg.clock.set_system_time(T[0] / 1000); pg.wait_for_timeout(450)
-        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st', timeout=15000); pg.wait_for_timeout(600)
-        ev("localStorage.clear()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(700)
+        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st', timeout=15000); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(600)
+        ev("localStorage.clear()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(700)
         T[0] = int(ev("Date.now()"))
         tag = 'celular' if mobile else 'computador'
         def tela(wx, wy):
@@ -41,8 +41,8 @@ def run(viewport, mobile):
         check(f'[{tag}] mostra São Bento do Sapucaí', 'São Bento do Sapucaí' in ev("document.getElementById('hRegiao').textContent"))
         check(f'[{tag}] barra de baixo cabe na tela', ev("(()=>{const r=document.querySelector('.bottom').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight})()"))
         # 1) colher o milho que já começa pronto
-        tocar_canteiro(1); s = st()
-        check(f'[{tag}] tocar no milho pronto colhe e vai para o celeiro', s['celeiro']['itens'].get('milho') == 2 and s['xp'] == 3, s['celeiro'])
+        g0 = st()['celeiro']['itens'].get('milho', 0); tocar_canteiro(1); s = st()
+        check(f'[{tag}] tocar no milho pronto colhe e vai para o celeiro', s['celeiro']['itens'].get('milho', 0) - g0 == 2 and s['xp'] == 3, s['celeiro'])
         # 2) plantar: tocar em canteiro vazio abre as sementes
         tocar_canteiro(0)
         check(f'[{tag}] canteiro vazio abre a escolha de sementes', ev("!document.getElementById('sheet').classList.contains('hidden')") and 'Milho' in ev("document.getElementById('shBody').innerText"))
@@ -119,7 +119,7 @@ def run(viewport, mobile):
         check(f'[{tag}] "+" mostra como ganhar jogando (sem compra real)', 'dinheiro de verdade' in t and 'R$' not in t)
         btn('#shClose')
         # 11) salvar e recarregar
-        antes = st(); ev("CF.salvar()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(600); depois = st()
+        antes = st(); ev("CF.salvar()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(600); depois = st()
         iguais = all(antes[k] == depois[k] for k in ['moedas', 'xp', 'nivel', 'sementes', 'celeiro', 'canteiros', 'padaria', 'missao'])
         check(f'[{tag}] recarregar a página mantém tudo', iguais, [k for k in ['moedas', 'xp', 'nivel', 'sementes', 'celeiro', 'canteiros', 'padaria', 'missao'] if antes[k] != depois[k]])
         # 12) tempo passa com o jogo fechado
@@ -129,13 +129,13 @@ def run(viewport, mobile):
         ev("CF.salvar()"); T[0] = int(ev('Date.now()')) + 50000; pg.close()
         pg = ctx.new_page(); ev = pg.evaluate; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.clock.install(time=T[0] / 1000); pg.clock.resume()
-        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(500)
+        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(500)
         check(f'[{tag}] a alface cresceu com o jogo fechado', ev("CF.G.estadoCanteiro(CF.st,0).tipo") == 'pronto', ev("CF.G.estadoCanteiro(CF.st,0)"))
         # 13) save danificado (gravado antes do jogo abrir)
         def abre_com_save(valor_js):
             p2 = ctx.new_page(); p2.on('pageerror', lambda e: errs.append(str(e)))
             p2.add_init_script("try{localStorage.setItem('conecta_fazenda_save_v1',"+valor_js+")}catch(_){}")
-            p2.goto(URL); p2.wait_for_function('window.CF && window.CF.st'); p2.wait_for_timeout(400); return p2
+            p2.goto(URL); p2.wait_for_function('window.CF && window.CF.st'); p2.evaluate('CF.tut&&CF.tut.pular()'); p2.wait_for_timeout(400); return p2
         pg.close()
         p2 = abre_com_save("'{quebrado'")
         check(f'[{tag}] save danificado não trava o jogo', p2.evaluate("CF.st.moedas") == 100 and p2.evaluate("!!localStorage.getItem('conecta_fazenda_backup')"))
@@ -149,6 +149,7 @@ def run(viewport, mobile):
 
 run({'width': 1280, 'height': 800}, False)
 run({'width': 390, 'height': 844}, True)
+
 print(f"\n{len(res)} testes, {sum(1 for r in res if not r[1])} falhas")
 
 
@@ -159,7 +160,7 @@ def run_mapa(viewport, mobile):
         ctx = b.new_context(viewport=viewport, has_touch=mobile, is_mobile=mobile, device_scale_factor=2 if mobile else 1)
         pg = ctx.new_page(); ev = pg.evaluate; errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))
-        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); ev("localStorage.clear()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(600)
+        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); ev("localStorage.clear()"); pg.reload(); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(600)
         tag = 'mapa-celular' if mobile else 'mapa-computador'
         cam = lambda: ev("({x:CF.E.cam.x,y:CF.E.cam.y,z:CF.E.cam.zoom})")
         PE = """((pts,type)=>{const cv=document.getElementById('game');for(const q of pts){const [px,py]=CF.pagina(q[1],q[2]);cv.dispatchEvent(new PointerEvent(type,{pointerId:q[0],clientX:px,clientY:py,bubbles:true,pointerType:'touch',isPrimary:q[0]===1,button:0,buttons:type==='pointerup'?0:1}))}})"""
@@ -231,6 +232,7 @@ def run_mapa(viewport, mobile):
           const pontas=g.every(s=>{const a=m.PONTOS[s.de],b=m.PONTOS[s.ate],p0=s.pts[0],p1=s.pts[s.pts.length-1];return Math.hypot(p0[0]-a.x,p0[1]-a.y)<1&&Math.hypot(p1[0]-b.x,p1[1]-b.y)<1});
           const tags=['casa','celeiro','padaria','galinheiro','curral','deposito','silo'];const blocos=CF.E.sprites.filter(s=>tags.includes(s.tag)).map(s=>{const b=s.bounds();return {tag:s.tag,x0:b.x+b.w*.08,x1:b.x+b.w*.92,y0:b.y+b.h*.3,y1:b.y+b.h-18}});
           const poco=CF.E.sprites.find(s=>s.img&&s.img.src.includes('poco'));if(poco){const b=poco.bounds();blocos.push({tag:'poco',x0:b.x+10,x1:b.x+b.w-10,y0:b.y+b.h*.3,y1:b.y+b.h-12})}
+          for(const L of CF.S.lotes)blocos.push({tag:'vila_'+L.c.id,x0:L.x-78,x1:L.x+78,y0:L.y-95,y1:L.y+8});
           const invade=[];for(const s of g)for(const q of s.pts)for(const k of blocos){if(q[0]>k.x0&&q[0]<k.x1&&q[1]>k.y0&&q[1]<k.y1)invade.push(k.tag+':'+s.de+'>'+s.ate)}
           let maxPasso=0;for(const s of g)for(let i=1;i<s.pts.length;i++)maxPasso=Math.max(maxPasso,Math.hypot(s.pts[i][0]-s.pts[i-1][0],s.pts[i][1]-s.pts[i-1][1]));
           let maxCurva=0;for(const s of g)for(let i=2;i<s.pts.length;i++){const a=Math.atan2(s.pts[i-1][1]-s.pts[i-2][1],s.pts[i-1][0]-s.pts[i-2][0]),b=Math.atan2(s.pts[i][1]-s.pts[i-1][1],s.pts[i][0]-s.pts[i-1][0]);let d=Math.abs(a-b);if(d>Math.PI)d=2*Math.PI-d;maxCurva=Math.max(maxCurva,d)}
@@ -238,7 +240,7 @@ def run_mapa(viewport, mobile):
         check(f'[{tag}] estradas: nenhum trecho repetido', R['dup'] == 0)
         check(f'[{tag}] estradas: rede toda ligada, sem ponto solto', R['ligado'] and not R['soltos'], R['soltos'])
         check(f'[{tag}] estradas: cada trecho começa e termina num ponto da rede', R['pontas'])
-        check(f'[{tag}] estradas: não atravessam casa, celeiro, padaria, galinheiro, curral, galpão, silo nem poço', not R['invade'], R['invade'][:5])
+        check(f'[{tag}] estradas: não atravessam casa, celeiro, padaria, galinheiro, curral, galpão, silo, poço nem casas da vila', not R['invade'], R['invade'][:5])
         check(f'[{tag}] estradas: curvas suaves (sem quinas)', R['maxPasso'] < 12 and R['maxCurva'] < .5, (round(R['maxPasso'], 1), round(R['maxCurva'], 2)))
         pg.screenshot(path=f'/tmp/claude-0/cft/{tag}.png')
         check(f'[{tag}] sem erros de script', not errs, errs[:3])
@@ -252,13 +254,13 @@ def run_extras():
         b = p.chromium.launch(executable_path=CHROME)
         ctx = b.new_context(viewport={'width': 390, 'height': 844}, reduced_motion='reduce', has_touch=True, is_mobile=True)
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(500)
+        pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(500)
         pg.click('#zAll', force=True); pg.wait_for_timeout(120)
         check('[movimento reduzido] visão geral sem animação (imediata)', abs(pg.evaluate('CF.E.cam.zoom') - pg.evaluate('CF.E.minZoom')) < .001)
         prevent = pg.evaluate("(()=>{const e=new Event('gesturestart',{cancelable:true});document.dispatchEvent(e);return e.defaultPrevented})()")
         check('[iPhone] gesto de zoom da página é bloqueado (só o mapa amplia)', prevent)
         check('[extras] sem erros de script', not errs, errs[:3])
-        ctx2 = b.new_context(viewport={'width': 1280, 'height': 800}); pg2 = ctx2.new_page(); pg2.goto(URL); pg2.wait_for_function('window.CF && window.CF.st'); pg2.wait_for_timeout(500)
+        ctx2 = b.new_context(viewport={'width': 1280, 'height': 800}); pg2 = ctx2.new_page(); pg2.goto(URL); pg2.wait_for_function('window.CF && window.CF.st'); pg2.evaluate('CF.tut&&CF.tut.pular()'); pg2.wait_for_timeout(500)
         x, y = pg2.evaluate("(()=>{const b=CF.S.celeiro.bounds();const s=CF.E.toScreen(b.x+b.w/2,b.y+b.h*.6);return [s.x,s.y]})()")
         pg2.mouse.move(x, y); pg2.wait_for_timeout(150); pg2.mouse.move(x + 2, y + 2); pg2.wait_for_timeout(150)
         check('[computador] mãozinha em cima do celeiro', pg2.evaluate("document.getElementById('game').style.cursor") == 'pointer')
@@ -272,7 +274,7 @@ def run_telas():
             mob = w < 1000
             ctx = b.new_context(viewport={'width': w, 'height': h}, has_touch=mob, is_mobile=mob and w < 900, device_scale_factor=2 if mob else 1)
             pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-            pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(500)
+            pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(500)
             tag = f'[tela {w}x{h} {"em pé" if h > w else "deitada"}]'
             R = pg.evaluate("""(()=>{const vis=(b)=>{const a=CF.E.toScreen(b.x,b.y),c=CF.E.toScreen(b.x+b.w,b.y+b.h);const x0=Math.max(0,a.x),x1=Math.min(CF.E.vw,c.x),y0=Math.max(0,a.y),y1=Math.min(CF.E.vh,c.y);return Math.max(0,x1-x0)*Math.max(0,y1-y0)/((c.x-a.x)*(c.y-a.y))};
               const ok=(x,y)=>{const s=CF.E.toScreen(x,y);return s.x>0&&s.x<CF.E.vw&&s.y>0&&s.y<CF.E.vh-80};
@@ -305,5 +307,128 @@ def run_telas():
             check(f'{tag} sem erros de script', not errs, errs[:2])
             b.close()
 run_telas()
+
+def run_campanha():
+    """tutorial, plantas novas, casas da vila, mapa da Mantiqueira e conclusão de São Bento"""
+    with sync_playwright() as p:
+        b = p.chromium.launch(executable_path=CHROME)
+        ctx = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        ev = pg.evaluate
+        def carrega(limpa=False):
+            if limpa: ev("localStorage.clear()")
+            pg.reload(); pg.wait_for_function('window.CF&&window.CF.tut&&window.CF.rg'); pg.wait_for_timeout(600)
+        pg.goto(URL); pg.wait_for_function('window.CF&&window.CF.tut'); carrega(True)
+        vis = lambda sel: ev(f"(()=>{{const e=document.querySelector('{sel}');if(!e||e.classList.contains('hidden'))return false;const r=e.getBoundingClientRect();return getComputedStyle(e).display!=='none'&&r.width>0}})()")
+        def toca(wx, wy):
+            x, y = ev(f"(()=>{{const s=CF.E.toScreen({wx},{wy});return CF.pagina(s.x,s.y)}})()"); pg.touchscreen.tap(x, y); pg.wait_for_timeout(350)
+        def mostra(wx, wy): ev(f"CF.E.setZoom(1);CF.E.centerOn({wx},{wy})"); pg.wait_for_timeout(120)
+        T = '[campanha]'
+        # --- 15 imagens de plantas (5 fases) carregam
+        R = ev("""Promise.all(['alface','tomate','cenoura','milho'].flatMap(c=>[1,2,3,4,5].map(n=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>0);i.onerror=()=>r(false);i.src='assets/img/'+c+'_'+n+'.webp'})))).then(a=>a.filter(Boolean).length)""")
+        check(f'{T} 20 imagens de plantas (alface, tomate, cenoura e milho × 5 fases) carregam', R == 20, R)
+        R = ev("(async()=>{const d=await import('./src/data.js');return Object.values(d.CULTURAS).every(c=>c.stages===5)})()")
+        check(f'{T} toda cultura tem 5 fases', R)
+        # --- tutorial
+        check(f'{T} tutorial aparece num jogo novo, passo 1', vis('#tut') and ev("CF.tut.passo") == 0)
+        pg.click('#tutOk', force=True); pg.wait_for_timeout(200)
+        check(f'{T} botão "Vamos lá" vai ao passo 2 (colher)', ev("CF.tut.passo") == 1)
+        P = ev("(()=>{const s=CF.st;const P=CF.S.plots.find(P=>CF.G.estadoCanteiro(s,P.i).tipo==='pronto');return P&&[P.x,P.y]})()")
+        check(f'{T} existe um canteiro pronto para colher', bool(P))
+        mostra(*P); toca(P[0], P[1] - 40)
+        check(f'{T} colher de verdade avança o tutorial', ev("CF.tut.passo") == 2, ev("CF.tut.passo"))
+        P = ev("(()=>{const s=CF.st;const P=CF.S.plots.find(P=>CF.G.estadoCanteiro(s,P.i).tipo==='vazio');return [P.x,P.y]})()")
+        mostra(*P); toca(P[0], P[1])
+        aberto = vis('#sheet')
+        if aberto:
+            pg.click("[data-act='escolher:alface']", force=True); pg.wait_for_timeout(300)
+        check(f'{T} plantar alface pelo canteiro avança o tutorial', ev("CF.tut.passo") == 3, (aberto, ev("CF.tut.passo")))
+        ev("document.getElementById('pbOk')&&document.getElementById('pbOk').click()")
+        A = ev("(()=>{const A=CF.S.animals.find(A=>A.tipo==='vaca');return [A.x,A.y]})()")
+        mostra(*A); toca(A[0], A[1] - 30)
+        if ev("CF.tut.passo") == 3:  # a vaca anda pelo pasto; se o toque não pegou, usa o botão Animais
+            if not vis('#sheet'): pg.click("nav.bottom [data-a='animais']", force=True); pg.wait_for_timeout(300)
+            pg.click("[data-act^='alimentar:']:not([disabled])", force=True); pg.wait_for_timeout(300)
+        check(f'{T} alimentar a vaca avança o tutorial', ev("CF.tut.passo") == 4, ev("CF.tut.passo"))
+        if vis('#sheet'): pg.click('#shClose', force=True); pg.wait_for_timeout(200)
+        check(f'{T} botão do Mercado fica destacado', ev("document.querySelector('[data-a=mercado]').classList.contains('tutAlvo')"))
+        pg.click("nav.bottom button[data-a='mercado']", force=True); pg.wait_for_timeout(250)
+        pg.click("[data-act='mercado:vender']", force=True); pg.wait_for_timeout(250)
+        pg.click("[data-act^='vender:']", force=True); pg.wait_for_timeout(300)
+        check(f'{T} vender no Mercado avança o tutorial', ev("CF.tut.passo") == 5, ev("CF.tut.passo"))
+        pg.click('#shClose', force=True); pg.wait_for_timeout(200)
+        pg.click("nav.bottom button[data-a='construir']", force=True); pg.wait_for_timeout(300)
+        check(f'{T} abrir Construir avança o tutorial', ev("CF.tut.passo") == 6)
+        check(f'{T} Construir lista as 5 casas da vila', ev("document.querySelectorAll('#shBody [data-act^=\"casa:\"]').length + document.querySelectorAll('#shBody .row.sel img[src*=vila_]').length") >= 1 and ev("document.getElementById('shBody').innerText").count('Casa') >= 5)
+        pg.click('#shClose', force=True); pg.wait_for_timeout(200)
+        pg.click('#tutOk', force=True); pg.wait_for_timeout(200)
+        check(f'{T} último botão encerra o tutorial', not vis('#tut') and ev("CF.st.tut.fim"))
+        carrega()
+        check(f'{T} tutorial concluído não volta depois de recarregar', not vis('#tut'))
+        ev("document.querySelector('[data-act=rever]')||0"); pg.click('#bConfig', force=True); pg.wait_for_timeout(250)
+        pg.click("[data-act='rever']", force=True); pg.wait_for_timeout(250)
+        check(f'{T} "Rever tutorial" em Ajustes recomeça do passo 1', vis('#tut') and ev("CF.tut.passo") == 0)
+        pg.click('#tutPular', force=True); pg.wait_for_timeout(200)
+        check(f'{T} "Pular" fecha o tutorial', not vis('#tut') and ev("CF.st.tut.fim"))
+        # --- casas da vila
+        R = ev("(()=>{const s=CF.st;s.moedas=50;return CF.G.construirCasa(s,'casa1').ok})()")
+        check(f'{T} casa não sai sem moedas suficientes', R is False)
+        R = ev("(()=>{const s=CF.st;s.moedas=5000;return CF.G.construirCasa(s,'casa2')})()")
+        check(f'{T} casa respeita o nível mínimo', not R['ok'] and 'nível' in R['msg'], R['msg'])
+        R = ev("(()=>{const s=CF.st;const m=s.moedas;const r=CF.G.construirCasa(s,'casa1');return [r.ok,m-s.moedas,!!s.casas.casa1,CF.G.construirCasa(s,'casa1').ok]})()")
+        check(f'{T} construir casa 1 cobra 80 moedas e não constrói duas vezes', R == [True, 80, True, False], R)
+        ev("CF.salvar()"); carrega()
+        check(f'{T} casa construída continua depois de recarregar', ev("!!CF.st.casas.casa1"))
+        # --- mapa da Mantiqueira
+        pg.click('#bMapa', force=True); pg.wait_for_timeout(500)
+        check(f'{T} botão Mapa abre o mapa da Mantiqueira', vis('#regiao'))
+        R = ev("[...document.querySelectorAll('.rgCity')].map(e=>[e.dataset.id,e.className])")
+        check(f'{T} mapa mostra as 11 cidades', len(R) == 11, len(R))
+        check(f'{T} São Bento disponível/em andamento, Sapucaí-Mirim bloqueada', ('rg-disponivel' in R[0][1] or 'rg-andamento' in R[0][1]) and 'rg-bloqueada' in dict(R)['sapucai-mirim'], R[:2])
+        R = ev("""(()=>{const a=[...document.querySelectorAll('.rgCity')].map(e=>e.getBoundingClientRect());let n=0;for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){const p=a[i],q=a[j];if(p.left<q.right-2&&q.left<p.right-2&&p.top<q.bottom-2&&q.top<p.bottom-2)n++}return n})()""")
+        check(f'{T} etiquetas das cidades não ficam umas sobre as outras', R == 0, R)
+        k0 = ev("CF.rg.T.k"); pg.click('#rgIn', force=True); pg.wait_for_timeout(100)
+        check(f'{T} botão + aproxima o mapa regional', ev("CF.rg.T.k") > k0)
+        for _ in range(6): pg.click('#rgOut', force=True)
+        R = ev("(()=>{const c=document.getElementById('rgCena'),r=document.querySelector('#rgWrap img').getBoundingClientRect(),q=c.getBoundingClientRect();return r.left<=q.left+1&&r.top<=q.top+1&&r.right>=q.right-1&&r.bottom>=q.bottom-1})()")
+        check(f'{T} afastando ao máximo o mapa ainda cobre a tela toda (sem fundo vazio)', R)
+        x0 = ev("CF.rg.T.x")
+        ev("""(()=>{const c=document.getElementById('rgCena');const f=(t,x,y)=>c.dispatchEvent(new PointerEvent(t,{pointerId:3,clientX:x,clientY:y,bubbles:true,pointerType:'touch'}));f('pointerdown',300,400);for(let i=1;i<=8;i++)f('pointermove',300-i*10,400);f('pointerup',220,400)})()""")
+        check(f'{T} arrastar move o mapa regional', ev("CF.rg.T.x") != x0 or ev("CF.rg.T.x") <= ev("document.getElementById('rgCena').clientWidth-1536*CF.rg.T.k")+1)
+        pg.click('#rgCentro', force=True); pg.wait_for_timeout(150)
+        pg.click(".rgCity[data-id='sapucai-mirim']", force=True); pg.wait_for_timeout(300)
+        t = ev("document.getElementById('shBody').innerText")
+        check(f'{T} tocar em cidade bloqueada explica o requisito', 'bloqueada' in t.lower() and 'São Bento' in t, t[:80])
+        pg.click('#shClose', force=True); pg.click('#rgVoltar', force=True); pg.wait_for_timeout(200)
+        check(f'{T} voltar fecha o mapa regional', not vis('#regiao'))
+        # --- conclusão de São Bento: prêmio uma vez só, libera Sapucaí-Mirim, fica salvo
+        m0 = ev("CF.st.moedas")
+        ev("""(()=>{const s=CF.st;const c=(t,v)=>{s.cont[t]=s.cont[t]||{};s.cont[t]['*']=Math.max(s.cont[t]['*']||0,v)};c('plantar',10);c('colher',30);c('alimentar',8);c('entregar',5);
+              s.cont.produzir=s.cont.produzir||{};s.cont.produzir.queijo=2;s.padaria.construida=true;s.casas={casa1:true,casa2:true,casa3:true};s.xp=Math.max(s.xp,99999);s.nivel=Math.max(s.nivel,5);s.celeiro.itens.milho=(s.celeiro.itens.milho||0)+1})()""")
+        R = ev("CF.G.progressoCidade(CF.st,'sao-bento-do-sapucai')")
+        check(f'{T} objetivos de São Bento ficam 100% quando tudo é feito', R['completa'] and R['pct'] == 100, R)
+        m0 = ev("CF.st.moedas")
+        pg.click("nav.bottom button[data-a='mercado']", force=True); pg.wait_for_timeout(250); pg.click("[data-act='mercado:vender']", force=True); pg.wait_for_timeout(250)
+        pg.click("[data-act='vender:milho:1']", force=True); pg.wait_for_timeout(400); m0 += 6
+        check(f'{T} aviso de cidade concluída aparece', vis('#modal') and 'concluída' in ev("document.getElementById('modal').innerText"))
+        m1 = ev("CF.st.moedas")
+        check(f'{T} prêmio de 250 moedas entregue (mais os presentes de nível)', m1 - m0 >= 250 and '250 moedas' in ev("document.getElementById('modal').innerText") and ev("CF.st.cidades['sao-bento-do-sapucai'].premio"), m1 - m0)
+        check(f'{T} Sapucaí-Mirim liberada', ev("CF.G.estadoCidade(CF.st,'sapucai-mirim').tipo") == 'em-breve')
+        check(f'{T} Santo Antônio continua bloqueada', ev("CF.G.estadoCidade(CF.st,'santo-antonio-do-pinhal').tipo") == 'bloqueada')
+        pg.click('#mOk', force=True); pg.wait_for_timeout(400)
+        check(f'{T} "Ver o mapa" abre o mapa com São Bento concluída', vis('#regiao') and 'rg-concluida' in ev("document.querySelector(\".rgCity[data-id='sao-bento-do-sapucai']\").className"))
+        R = ev("CF.G.concluirCidade(CF.st,'sao-bento-do-sapucai').ok")
+        check(f'{T} prêmio não pode ser recebido duas vezes', R is False and ev("CF.st.moedas") == m1)
+        ev("CF.salvar()"); carrega()
+        check(f'{T} depois de recarregar: São Bento concluída, Sapucaí liberada, sem prêmio repetido', ev("CF.G.estadoCidade(CF.st,'sao-bento-do-sapucai').tipo") == 'concluida' and ev("CF.G.estadoCidade(CF.st,'sapucai-mirim').tipo") == 'em-breve' and ev("CF.st.moedas") == m1 and not vis('#modal'))
+        falso = ev("""(()=>{const p=JSON.parse(localStorage.getItem('conecta_fazenda_save_v1'));const d=JSON.parse(p.d);d.cidades={'sapucai-mirim':{premio:true,em:1}};d.casas={};d.cont={};d.padaria={construida:false};d.xp=0;p.d=JSON.stringify(d);return JSON.stringify(p)})()""")
+        pg.close(); pg = ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e))); ev = pg.evaluate
+        pg.add_init_script("if(!sessionStorage.getItem('t')){sessionStorage.setItem('t','1');localStorage.setItem('conecta_fazenda_save_v1'," + json.dumps(falso) + ")}")
+        pg.goto(URL); pg.wait_for_function('window.CF&&window.CF.rg'); pg.wait_for_timeout(500)
+        check(f'{T} save alterado à mão não libera cidade sem cumprir os objetivos', ev("CF.G.estadoCidade(CF.st,'sapucai-mirim').tipo") == 'bloqueada' and ev("CF.G.estadoCidade(CF.st,'sao-bento-do-sapucai').tipo") != 'concluida')
+        pg.screenshot(path='/tmp/claude-0/cft/campanha.png')
+        check(f'{T} sem erros de script', not errs, errs[:3])
+        b.close()
+run_campanha()
 
 print(f"\n{len(res)} testes no total, {sum(1 for r in res if not r[1])} falhas")

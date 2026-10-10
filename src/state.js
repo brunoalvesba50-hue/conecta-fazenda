@@ -1,7 +1,7 @@
 /* Conecta Fazenda — salvar e carregar o progresso neste aparelho.
    Nesta fase o progresso fica só no navegador (localStorage), sem senha e sem dados pessoais.
    Ao carregar, tudo é conferido: valores estranhos ou corrompidos são corrigidos. */
-import { VERSAO_SAVE, CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, NIVEIS, MISSOES } from './data.js';
+import { VERSAO_SAVE, CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, NIVEIS, MISSOES, CASAS, REGIOES, OBJETIVOS } from './data.js';
 import { novoJogo, repoeEntregas, agora } from './game.js';
 
 const CHAVE = 'conecta_fazenda_save_v1';
@@ -37,6 +37,10 @@ export function sanear(raw, now = agora()) {
     id: String(e.id || '').slice(0, 20), nome: String(e.nome || 'Vizinho').slice(0, 40),
     pede: Object.fromEntries(Object.entries(e.pede).map(([k, q]) => [k, int(q, 1, 99, 1)])), moedas: int(e.moedas, 1, 5000, 10), xp: int(e.xp, 1, 500, 5),
   })) : [];
+  st.casas = {}; for (const c of CASAS) if (obj(raw.casas)[c.id] === true) st.casas[c.id] = true;
+  st.cidades = {}; for (const r of REGIOES) { const c = obj(raw.cidades)[r.id]; if (c && c.premio === true) st.cidades[r.id] = { em: int(c.em, 0, now, now), premio: true }; }
+  /* tutorial: quem já jogava antes do tutorial existir não é obrigado a ver (pode rever em Ajustes) */
+  const tu = raw.tut; st.tut = tu && typeof tu === 'object' ? { passo: int(tu.passo, 0, 50, 0), fim: tu.fim === true, base: int(tu.base, 0, 1e9, 0) } : { passo: 0, fim: true };
   repoeEntregas(st);
   st.atualizado = now;
   return st;

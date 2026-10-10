@@ -1,7 +1,7 @@
 /* Conecta Fazenda — a cena de São Bento do Sapucaí: fundo com a Pedra do Baú, chão, casa, celeiro,
    canteiros, animais, árvores e enfeites. Também desenha barras de crescimento e balões. */
 import { Sprite, ease } from './engine.js';
-import { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS } from './data.js';
+import { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS, CASAS } from './data.js';
 import { estadoCanteiro, estadoAnimal, estadoPadaria, fmtTempo, agora } from './game.js';
 import { CROPMETA } from './cropmeta.js';
 import { desenhaEstradas } from './roads.js';
@@ -119,10 +119,10 @@ export function buildScene(E, IMG, api) {
   /* mais vegetação da Mantiqueira: araucárias, ipês e pinheiros variados (tamanhos e lados diferentes) */
   [['araucaria', 270, 560, 150, 1], ['pinheiro2', 520, 600, 96], ['ipe_rosa', 820, 575, 130, 1], ['araucaria', 1180, 560, 140], ['pinheiro', 1400, 600, 100, 1],
    ['arvore_frutifera', 1560, 575, 118], ['pinheiro', 36, 830, 104, 1], ['araucaria', 1768, 900, 170, 1], ['ipe_amarelo', 1756, 1110, 132],
-   ['pinheiro2', 900, 1372, 100, 1], ['ipe_rosa', 1300, 1376, 124], ['araucaria', 430, 1372, 150]].forEach(a => tree(...a));
+   ['pinheiro2', 900, 1372, 100, 1], ['ipe_rosa', 1110, 1372, 118], ['araucaria', 430, 1372, 150]].forEach(a => tree(...a));
   /* ---- parte de baixo: mata com lago, curral, pomar com galpão e silo ---- */
   [['araucaria', 90, 1620, 170], ['pinheiro2', 330, 1600, 100, 1], ['pinheiro', 56, 1790, 110], ['araucaria', 170, 2010, 190, 1], ['ipe_rosa', 540, 1930, 140],
-   ['araucaria', 420, 2000, 160], ['pinheiro', 250, 2080, 100, 1], ['ipe_amarelo', 860, 1500, 120, 1], ['pinheiro2', 880, 2060, 96],
+   ['araucaria', 420, 2000, 160], ['pinheiro', 250, 2080, 100, 1], ['ipe_amarelo', 40, 1470, 120, 1], ['pinheiro2', 880, 2060, 96],
    ['araucaria', 1770, 2060, 180], ['pinheiro', 1560, 2080, 104, 1],
    /* faixa de mata no fim do mapa (para o celular em pé poder afastar sem mostrar área vazia) */
    ['araucaria', 80, 2240, 180, 1], ['ipe_amarelo', 300, 2290, 140], ['pinheiro2', 470, 2250, 100], ['araucaria', 960, 2280, 170, 1], ['ipe_rosa', 1180, 2250, 130],
@@ -146,8 +146,8 @@ export function buildScene(E, IMG, api) {
   const casa = add({ img: IMG.casa, x: 590, y: 815, s: 440 / IMG.casa.width, onTap: () => api.tap('casa'), tag: 'casa' });
   const celeiro = add({ img: IMG.celeiro, x: 1290, y: 830, s: 340 / IMG.celeiro.width, onTap: () => api.tap('celeiro'), tag: 'celeiro' });
   add({ img: IMG.poco, x: 900, y: 860, s: 115 / IMG.poco.width, onTap: () => api.tap('poco') });
-  add({ img: IMG.galinheiro, x: 330, y: 1075, s: 250 / IMG.galinheiro.width, onTap: () => api.tap('galinheiro'), tag: 'galinheiro' });
-  S.padaria = add({ img: IMG.padaria, x: 1630, y: 930, s: 280 / IMG.padaria.width, onTap: () => api.tap('padaria'), tag: 'padaria' });
+  add({ img: IMG.galinheiro, x: 330, y: 1088, s: 270 / IMG.galinheiro.width, onTap: () => api.tap('galinheiro'), tag: 'galinheiro' });
+  S.padaria = add({ img: IMG.padaria, x: 1630, y: 946, s: 270 / IMG.padaria.width, onTap: () => api.tap('padaria'), tag: 'padaria' });
   add({ img: IMG.feno, x: 1470, y: 860, s: 70 / IMG.feno.width }); add({ img: IMG.feno, x: 1500, y: 885, s: 64 / IMG.feno.width });
   add({ img: IMG.carroca, x: 1150, y: 985, s: 110 / IMG.carroca.width });
   add({ img: IMG.banco, x: 790, y: 852, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 968, y: 860, s: 34 / IMG.lampiao.width });
@@ -188,6 +188,27 @@ export function buildScene(E, IMG, api) {
     else if (e.tipo === 'crescendo') bar(c, P.x, P.y + 4, e.progresso, fmtTempo(e.falta));
     else if (e.tipo === 'pronto') bubble(c, P.x, P.y - 130, IMG['i_' + e.cultura], E.t + P.i, 'ok');
   }
+
+  /* casas da vila: terreno à venda ou a casa construída */
+  S.lotes = CASAS.map((c, k) => {
+    const [x, y] = c.lote, L = { c, x, y };
+    L.spr = add({ x, y, z: y, tag: 'vila_' + c.id,
+      hit: (wx, wy) => { const img = IMG['vila_' + c.id], w = 190, h = img.height * w / img.width; return api.state().casas[c.id] ? (wx > x - w / 2 && wx < x + w / 2 && wy > y - h && wy < y) : Math.abs(wx - x) / 92 + Math.abs(wy - (y - 30)) / 52 <= 1; },
+      onTap: () => api.tapCasa(c.id),
+      draw: cx => {
+        const st = api.state();
+        if (st.casas[c.id]) { const img = IMG['vila_' + c.id], w = 190, h = img.height * w / img.width; cx.drawImage(img, x - w / 2, y - h, w, h); return; }
+        /* terreno: chão de terra batida, estacas e plaquinha "À venda" */
+        cx.save(); cx.globalAlpha = .92; cx.fillStyle = 'rgba(150,105,55,.55)'; cx.beginPath(); cx.moveTo(x, y - 82); cx.lineTo(x + 92, y - 30); cx.lineTo(x, y + 22); cx.lineTo(x - 92, y - 30); cx.closePath(); cx.fill();
+        cx.setLineDash([8, 6]); cx.lineWidth = 2.5; cx.strokeStyle = 'rgba(255,245,220,.8)'; cx.stroke(); cx.restore();
+        for (const [px, py] of [[x, y - 82], [x + 92, y - 30], [x, y + 22], [x - 92, y - 30]]) { cx.fillStyle = '#7a4d1e'; cx.fillRect(px - 2.5, py - 14, 5, 16); cx.fillStyle = '#e9c27a'; cx.fillRect(px - 2.5, py - 16, 5, 4); }
+        cx.fillStyle = '#6b431b'; cx.fillRect(x - 3, y - 74, 6, 44);
+        cx.save(); cx.translate(x, y - 84); cx.fillStyle = '#c99252'; cx.strokeStyle = '#6b431b'; cx.lineWidth = 3; rr(cx, -44, -18, 88, 30, 6); cx.fill(); cx.stroke();
+        cx.fillStyle = '#3d2508'; cx.font = '800 14px system-ui,-apple-system,sans-serif'; cx.textAlign = 'center'; cx.fillText('À VENDA', 0, 2); cx.restore();
+        lockBadge(cx, x, y - 28, c.custo, c.nivel, st);
+      } });
+    return L;
+  });
 
   /* fazendeiro */
   S.farmer = add({ img: IMG.p_idle, x: 600, y: 975, s: 100 / IMG.p_idle.height, onTap: () => api.tap('fazendeiro') });
@@ -243,6 +264,17 @@ export function buildScene(E, IMG, api) {
     else if (e.tipo === 'pronto') bubble(c, x, y + 40, IMG[PRODUTOS[e.receita].icone], E.t, 'ok');
   } });
   function smoke(c, x, y) { for (let k = 0; k < 4; k++) { const p = ((E.t * .5 + k / 4) % 1); c.fillStyle = `rgba(240,240,240,${.45 * (1 - p)})`; c.beginPath(); c.arc(x + Math.sin(p * 6 + k) * 8, y - p * 60, 8 + p * 14, 0, 7); c.fill(); } }
+
+  /* seta e anel pulsando do tutorial */
+  S.alvo = null;
+  add({ layer: 4, draw: c => {
+    const a = S.alvo && S.alvo(); if (!a) return;
+    const t = E.t, p = (t * 1.6) % 1, bob = Math.abs(Math.sin(t * 4)) * 14;
+    c.save(); c.strokeStyle = `rgba(255,230,90,${1 - p})`; c.lineWidth = 6; c.beginPath(); c.ellipse(a.x, a.y, 50 + p * 40, 28 + p * 22, 0, 0, 7); c.stroke();
+    c.strokeStyle = 'rgba(255,240,140,.9)'; c.lineWidth = 4; c.beginPath(); c.ellipse(a.x, a.y, 50, 28, 0, 0, 7); c.stroke();
+    const ty = a.y - (a.h || 80) - 20 - bob; c.fillStyle = '#ffb21e'; c.strokeStyle = '#7a4b0c'; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(a.x, ty + 40); c.lineTo(a.x - 26, ty + 8); c.lineTo(a.x - 11, ty + 8); c.lineTo(a.x - 11, ty - 26); c.lineTo(a.x + 11, ty - 26); c.lineTo(a.x + 11, ty + 8); c.lineTo(a.x + 26, ty + 8); c.closePath(); c.fill(); c.stroke(); c.restore();
+  } });
 
   /* efeitos: textos subindo (+2 milho) e brilhos */
   S.floatText = (wx, wy, txt, icon) => {

@@ -159,3 +159,48 @@ body.compacto .bottom .big{width:58px;height:58px}body.compacto .bottom .big img
 body.compacto .mChip{top:calc(var(--sat) + 8px)}
 body.compacto .plantBar{bottom:calc(var(--sab) + 76px)}
 @media (min-width:900px){.bottom .big{width:84px;height:84px}.quick button{width:64px}.quick img{width:36px;height:32px}.quick span{font-size:11px}}
+
+/* ================= tutorial ================= */
+#tut{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 96px);z-index:15;width:min(460px,calc(var(--W) - 16px));display:flex;align-items:flex-end;gap:0;pointer-events:none}
+.tutFoto{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #f6eddc;box-shadow:0 4px 12px rgba(0,0,0,.35);flex:none;position:relative;z-index:1;margin-right:-14px;pointer-events:auto;background:#7cb24a}
+.tutBalao{pointer-events:auto;flex:1;min-width:0;background:linear-gradient(#fffaf0,#f6eddc);border:2px solid #fff;border-radius:18px;padding:9px 12px 9px 22px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.tutNome{display:flex;justify-content:space-between;font-size:11.5px;font-weight:900;color:#9a6028}
+.tutNome i{font-style:normal;color:#7a6440;font-weight:700}
+#tutTxt{margin:3px 0 7px;font-size:14px;line-height:1.35;color:#2b1d08;font-weight:600}
+.tutBtns{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#tutPular{border:0;background:none;color:#7a6440;font-size:12px;font-weight:700;text-decoration:underline;padding:4px 0}
+#tutOk{border:0;border-radius:14px;padding:8px 16px;background:linear-gradient(#5ee87a,#20c957);color:#fff;font-weight:900;font-size:14px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+body.emTutorial .mChip{display:none}
+.tutAlvo{animation:tutPulso 1s ease-in-out infinite;z-index:16}
+@keyframes tutPulso{0%,100%{box-shadow:0 0 0 0 rgba(255,210,60,.9),0 4px 12px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 10px rgba(255,210,60,0),0 4px 12px rgba(0,0,0,.35)}}
+body.estreito .tutFoto{width:78px;height:78px}body.estreito #tutTxt{font-size:13px}
+body.compacto #tut{bottom:calc(var(--sab) + 70px)}body.compacto .tutFoto{width:64px;height:64px}
+
+/* ================= mapa regional ================= */
+#regiao{position:fixed;inset:0;z-index:18;background:#0b1620}
+#rgCena{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab}
+#rgWrap{position:absolute;left:0;top:0;width:1536px;height:782px;transform-origin:0 0}
+#rgWrap img{width:1536px;height:782px;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.rgTopo{position:absolute;left:0;right:0;top:calc(var(--sat) + 8px);display:flex;align-items:center;justify-content:center;pointer-events:none;padding:0 10px}
+.rgTopo .rBtn{position:absolute;left:calc(10px + var(--sal));pointer-events:auto}
+.rgPlaca{display:flex;flex-direction:column;align-items:center;padding:6px 18px 7px;border-radius:12px;background:linear-gradient(#a5682c,#6e4115);border:2.5px solid #e3a35e;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.rgPlaca b{font-size:18px;color:#ffe8b8;text-shadow:0 2px 0 #4a2a0c}
+.rgPlaca small{font-size:9.5px;font-weight:900;letter-spacing:1.5px;color:#f6eddc}
+.rgZoom{position:absolute;right:calc(10px + var(--sar));bottom:calc(var(--sab) + 14px)}
+.rgCity{position:absolute;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:18px;border:2px solid rgba(255,255,255,.35);background:#111b24;color:#f6eddc;text-align:left;box-shadow:0 6px 16px rgba(0,0,0,.45);cursor:pointer;overflow:hidden}
+.rgCity.sel{border-color:#ffd166;box-shadow:0 0 0 4px rgba(255,209,102,.45),0 6px 16px rgba(0,0,0,.45)}
+.rgIc{flex:none;width:48px;height:48px;display:grid;place-items:center}
+.rgIc svg{width:44px;height:44px}
+.rgLock{width:46px;height:46px;border-radius:50%;background:#123552;border:2px solid #f6eddc;display:grid;place-items:center}.rgLock svg{width:26px;height:26px}
+.rgNum{width:44px;height:44px;border-radius:50%;background:linear-gradient(#ffd166,#e3a35e);color:#4a2a0c;font-style:normal;font-weight:900;font-size:20px;display:grid;place-items:center;border:2px solid #fff}
+.rgTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.rgTx b{font-size:18px;line-height:1.1}
+.rgBar{position:relative;height:18px;border-radius:9px;background:#0b1620;border:1.5px solid rgba(255,255,255,.25);overflow:hidden}
+.rgBar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#5ee87a,#20c957)}
+.rgBar em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:12px;color:#fff;text-shadow:0 1px 2px #000}
+.rgTx small{font-size:12px;color:#d8cdb6;line-height:1.2}
+.rg-concluida{border-color:#20c957}.rg-concluida small{color:#7dffa4;font-weight:800}
+.rg-bloqueada b{color:#c9c1b0}
+.obj{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#fffdf7;border:1.5px solid #ecdcb8;margin-bottom:6px;font-size:13.5px}
+.obj i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:13px;background:#e6d6b2;color:#7a6440}
+.obj.ok i{background:#20c957;color:#fff}.obj span{flex:1}.obj small{font-weight:800;color:#7a6440}

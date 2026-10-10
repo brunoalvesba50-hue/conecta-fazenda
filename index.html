@@ -62,6 +62,21 @@
   </nav>
 </div>
 
+<!-- tutorial: fazendeiro com balão de fala (não cobre o meio da tela) -->
+<div id="tut" class="hidden" role="dialog" aria-live="polite">
+  <img class="tutFoto" src="assets/img/fazendeiro.webp" alt="Fazendeiro">
+  <div class="tutBalao"><span class="tutNome">Seu Zé, o fazendeiro <i id="tutPasso"></i></span><p id="tutTxt"></p>
+    <div class="tutBtns"><button id="tutPular">Pular tutorial</button><button id="tutOk" class="hidden"></button></div></div>
+</div>
+
+<!-- mapa regional da Serra da Mantiqueira -->
+<div id="regiao" class="hidden">
+  <div id="rgCena"><div id="rgWrap"><img src="assets/img/mapa_regional.webp" alt="Mapa ilustrado da Serra da Mantiqueira" draggable="false"></div></div>
+  <div class="rgTopo"><button id="rgVoltar" class="rBtn" aria-label="Voltar à fazenda"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="rgPlaca"><b>Conecta Fazenda</b><small>SERRA DA MANTIQUEIRA</small></div></div>
+  <div class="zoomBox rgZoom"><button id="rgIn" aria-label="Aproximar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button id="rgOut" aria-label="Afastar"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><button id="rgCentro" aria-label="Centralizar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg></button></div>
+</div>
+
 <div id="sheetBg" class="hidden"></div>
 <section id="sheet" class="hidden" role="dialog" aria-modal="true"><header><h2 id="shTitle"></h2><button id="shClose" aria-label="Fechar">×</button></header><div id="shBody"></div></section>
 <div id="toast" class="hidden"></div>

@@ -1,6 +1,6 @@
 /* Conecta Fazenda — regras do jogo (sem desenho). Cada ação muda o estado e devolve {ok, msg}.
    Tudo usa o relógio real (Date.now), então as plantas crescem mesmo com o jogo fechado. */
-import { CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, PADARIA, NIVEIS, BONUS_NIVEL, MISSOES, ENTREGAS_NOMES, VERSAO_SAVE, REGIAO } from './data.js';
+import { CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, PADARIA, NIVEIS, BONUS_NIVEL, MISSOES, ENTREGAS_NOMES, VERSAO_SAVE, REGIAO, CASAS, REGIOES, OBJETIVOS, PREMIO_CIDADE } from './data.js';
 
 export const agora = () => Date.now();
 
@@ -9,7 +9,7 @@ export function novoJogo(now = agora()) {
     v: VERSAO_SAVE, criado: now, atualizado: now, regiao: REGIAO.id,
     moedas: 100, xp: 0, nivel: 1,
     sementes: { milho: 6, alface: 2 },
-    celeiro: { itens: {}, melhoria: 0 },
+    celeiro: { itens: { milho: 4 }, melhoria: 0 }, // um pouco de milho guardado: dá para alimentar e vender já no tutorial
     canteiros: TERRENOS.map((t, i) => ({ liberado: t.custo === 0, cultura: null, plantadoEm: 0 })),
     animais: [
       { tipo: 'vaca', comeuEm: 0 }, { tipo: 'vaca', comeuEm: 0 },
@@ -19,6 +19,9 @@ export function novoJogo(now = agora()) {
     cont: {},
     missao: { idx: 0, base: 0 },
     entregas: [],
+    casas: {},
+    cidades: {},          /* cidades concluídas: { id: { em: data, premio: true } } */
+    tut: { passo: 0, fim: false },
   };
   /* para começar já com algo para colher: um milho pronto e uma alface crescendo */
   st.canteiros[1].cultura = 'milho'; st.canteiros[1].plantadoEm = now - 61000;
@@ -235,3 +238,52 @@ export function resgatarMissao(st) {
 }
 
 export function fmtTempo(s) { s = Math.max(0, Math.ceil(s)); if (s < 60) return s + 's'; const m = Math.floor(s / 60), r = s % 60; if (m < 60) return r ? `${m}min ${r}s` : `${m}min`; const h = Math.floor(m / 60); return `${h}h ${m % 60}min`; }
+
+/* ---------- casas da vila ---------- */
+export function construirCasa(st, id) {
+  const c = CASAS.find(x => x.id === id); if (!c) return erro('Casa inválida.');
+  if (st.casas[id]) return erro('Essa casa já foi construída.');
+  if (st.nivel < c.nivel) return erro(`${c.nome} libera no nível ${c.nivel}.`);
+  if (st.moedas < c.custo) return erro('Moedas insuficientes.');
+  st.moedas -= c.custo; st.casas[id] = true; conta(st, 'construir', 'casa');
+  const subiu = ganhaXp(st, c.xp);
+  return ok(`${c.nome} construída!`, { subiu });
+}
+export const casasFeitas = st => CASAS.filter(c => st.casas[c.id]).length;
+
+/* ---------- campanha das cidades ---------- */
+export function objetivos(st, regiao) {
+  return (OBJETIVOS[regiao] || []).map(o => {
+    let v = 0;
+    if (o.tipo === 'cont') v = lido(st, o.chave[0], o.chave[1]);
+    else if (o.tipo === 'padaria') v = st.padaria.construida ? 1 : 0;
+    else if (o.tipo === 'casas') v = casasFeitas(st);
+    else if (o.tipo === 'nivel') v = st.nivel;
+    return Object.assign({}, o, { feito: Math.min(o.qtd, v), ok: v >= o.qtd });
+  });
+}
+export function progressoCidade(st, regiao) {
+  const ob = objetivos(st, regiao); if (!ob.length) return { pct: 0, feitos: 0, total: 0, completa: false };
+  const f = ob.filter(o => o.ok).length; return { pct: Math.round(f / ob.length * 100), feitos: f, total: ob.length, completa: f === ob.length };
+}
+/* liberada = a cidade anterior está 100% (pelos objetivos calculados), não por um número salvo */
+export function estadoCidade(st, id) {
+  const r = REGIOES.find(x => x.id === id); if (!r) return { tipo: 'nada' };
+  const anterior = r.depois && REGIOES.find(x => x.id === r.depois);
+  const liberada = !anterior || (OBJETIVOS[anterior.id] ? progressoCidade(st, anterior.id).completa && !!st.cidades[anterior.id] : false);
+  const temArea = !!OBJETIVOS[id];
+  if (!liberada) return { tipo: 'bloqueada', requisito: anterior.nome, pct: 0 };
+  const p = progressoCidade(st, id);
+  if (!temArea) return { tipo: 'em-breve', pct: 0 };
+  if (p.completa) return { tipo: 'concluida', pct: 100 };
+  return { tipo: p.feitos ? 'andamento' : 'disponivel', pct: p.pct };
+}
+/* entrega o prêmio de cidade concluída uma única vez */
+export function concluirCidade(st, id, now = agora()) {
+  if (!progressoCidade(st, id).completa) return erro('Ainda faltam objetivos nesta cidade.');
+  if (st.cidades[id] && st.cidades[id].premio) return erro('Prêmio já recebido.');
+  st.cidades[id] = { em: now, premio: true }; st.moedas += PREMIO_CIDADE.moedas;
+  const subiu = ganhaXp(st, PREMIO_CIDADE.xp);
+  const prox = REGIOES.find(r => r.depois === id);
+  return ok('Cidade concluída!', { moedas: PREMIO_CIDADE.moedas, xp: PREMIO_CIDADE.xp, proxima: prox && prox.nome, subiu });
+}

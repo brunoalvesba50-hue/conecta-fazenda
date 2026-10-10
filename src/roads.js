@@ -14,7 +14,7 @@ export const PONTOS = {
   cruzCel:   { x: 1262, y: 892, tipo: 'cruzamento' },
   celeiro:   { x: 1262, y: 846, tipo: 'porta' },      // portão do celeiro
   cruzLeste: { x: 1420, y: 902, tipo: 'cruzamento' },
-  padaria:   { x: 1598, y: 946, tipo: 'porta' },
+  padaria:   { x: 1600, y: 958, tipo: 'porta' },
   cruzGal:   { x: 604,  y: 1132, tipo: 'cruzamento' },
   galinheiro:{ x: 424,  y: 1104, tipo: 'porta' },
   cruzSul:   { x: 598,  y: 1262, tipo: 'cruzamento' },
@@ -32,7 +32,7 @@ export const TRECHOS = [
   { de: 'cruzPoco',  ate: 'cruzCel',   via: [[1130, 886]] },
   { de: 'cruzCel',   ate: 'celeiro',   via: [] },
   { de: 'cruzCel',   ate: 'cruzLeste', via: [[1342, 896]] },
-  { de: 'cruzLeste', ate: 'padaria',   via: [[1510, 918]] },
+  { de: 'cruzLeste', ate: 'padaria',   via: [[1500, 936]] },
   { de: 'cruzCasa',  ate: 'cruzGal',   via: [[668, 990], [622, 1066]] },
   { de: 'cruzGal',   ate: 'galinheiro',via: [[520, 1124]] },
   { de: 'cruzGal',   ate: 'cruzSul',   via: [[592, 1198]] },

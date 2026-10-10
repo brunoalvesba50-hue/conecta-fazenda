@@ -11,6 +11,9 @@ Jogo de fazenda no navegador, ambientado na Serra da Mantiqueira. A primeira ár
 - Toque nas **vacas e galinhas** para alimentar (com milho) e depois coletar leite e ovos.
 - Use **Construir** para liberar canteiros, aumentar o celeiro e construir a **Padaria**, que faz queijo da serra e cestas da roça.
 - Complete as **missões** para ganhar moedas e experiência.
+- Construa as **5 casas da vila** (terrenos "À venda" no mapa), que liberam por nível.
+- No botão **Mapa**, veja as 11 cidades da Mantiqueira. Concluir os 8 objetivos de São Bento dá um prêmio (uma vez só) e libera Sapucaí-Mirim.
+- Num jogo novo, o **fazendeiro** ensina o básico. Cada passo só avança quando você faz a ação. Dá para pular e rever em Ajustes.
 
 ## Estrutura
 ```
@@ -21,6 +24,9 @@ src/scene.js               cena de São Bento (cenário, canteiros, animais, efe
 src/game.js                regras do jogo (plantar, colher, vender, missões…)
 src/data.js                preços, tempos, missões (fácil de ajustar)
 src/state.js               salvar/carregar com verificação
+src/tutorial.js            tutorial com o fazendeiro
+src/regional.js            mapa da Serra da Mantiqueira (cidades e progresso)
+src/roads.js               rede de estradas (pontos e trechos)
 src/cropmeta.js            posição da terra em cada imagem de plantação (gerado)
 assets/img/                imagens (WebP)
 testes/teste_jogo.py       testes automáticos (Playwright)
@@ -37,7 +43,13 @@ Nesta fase, o progresso fica salvo **no próprio aparelho** (localStorage). O sa
 python3 -m http.server 8765
 python3 testes/teste_jogo.py
 ```
-Testam o ciclo completo no computador e no celular: plantar, crescer, colher, vender, comprar, animais, entregas, nível, canteiro novo, padaria, salvar/recarregar, tempo com o jogo fechado e save danificado.
+Testam o ciclo completo no computador e no celular: plantar, crescer, colher, vender, comprar, animais, entregas, nível, canteiro novo, padaria, salvar/recarregar, tempo com o jogo fechado e save danificado. Também testam zoom e arrasto, 8 tamanhos de tela, estradas (sem atravessar construções), tutorial passo a passo, casas, mapa regional e conclusão de São Bento (prêmio único, save mexido à mão não libera cidade).
 
 ## Arte
 Ilustrações geradas para o projeto (referências da região). As peças da primeira folha de referências são provisórias e estão sendo trocadas por versões em alta resolução: o fundo, a casa, o celeiro, o milho, a vaca e a galinha já foram trocados.
+
+## Pendências
+- **Conquistas e Coleções** ainda não existem (sem botões falsos até existirem).
+- Sapucaí-Mirim é liberada, mas a área jogável dela vem numa próxima versão.
+- O fazendeiro tem uma pose só no tutorial; mais poses precisam de arte nova.
+- A conferência das cidades é feita no aparelho; vira à prova de trapaça quando o servidor do jogo existir.
