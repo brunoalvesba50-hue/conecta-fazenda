@@ -12,55 +12,53 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="screen-orientation" content="landscape">
+<meta name="screen-orientation" content="portrait">
 </head>
 <body>
 <div id="tela">
 <canvas id="game" aria-label="Fazenda em São Bento do Sapucaí"></canvas>
 
 <div id="hud" class="hidden">
-  <div class="hTop">
-    <div class="farmCard">
-      <div class="avatar"><img src="assets/img/p_acenando.webp" alt=""></div>
-      <div class="farmInfo">
-        <b>Minha Fazenda</b>
-        <span><svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12.5A7 7 0 0 0 5 9.5C5 14.8 12 22 12 22z" fill="#e8b44c"/><circle cx="12" cy="9.5" r="2.6" fill="#fff"/></svg><i id="hRegiao">São Bento do Sapucaí</i></span>
-      </div>
-      <div class="lvl">
-        <div class="star"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="url(#gs)" stroke="#b97a08" stroke-width="1"/><defs><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe46b"/><stop offset="1" stop-color="#f2a91b"/></linearGradient></defs></svg><b id="hNivel">1</b></div>
-        <div class="xpbar"><i id="hXpFill"></i></div>
-        <small id="hXp">0 / 40</small>
-      </div>
-    </div>
-    <div class="res">
-      <div class="pill" id="hCoins"><span class="coin"></span><b id="hMoedas">0</b><button class="plus" id="bGanhar" aria-label="Como ganhar mais moedas">+</button></div>
+  <!-- alto à esquerda: nível, experiência e região -->
+  <div class="hLvl">
+    <div class="star"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="url(#gs)" stroke="#b97a08" stroke-width="1"/><defs><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe46b"/><stop offset="1" stop-color="#f2a91b"/></linearGradient></defs></svg><b id="hNivel">1</b></div>
+    <div class="lvlInfo"><div class="xpbar"><i id="hXpFill"></i><small id="hXp">0 / 40</small></div><span class="reg"><svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12.5A7 7 0 0 0 5 9.5C5 14.8 12 22 12 22z" fill="#e8b44c"/><circle cx="12" cy="9.5" r="2.6" fill="#fff"/></svg><i id="hRegiao">São Bento do Sapucaí</i></span></div>
+  </div>
+  <!-- alto à direita: moedas (o + mostra como ganhar jogando) -->
+  <div class="hRes"><div class="pill" id="hCoins"><span class="coin"></span><b id="hMoedas">0</b><button class="plus" id="bGanhar" aria-label="Como ganhar mais moedas">+</button></div></div>
+
+  <!-- coluna esquerda: botões pequenos -->
+  <div class="side sideL">
+    <button class="rBtn" id="bConfig" aria-label="Ajustes"><img src="assets/img/ic_config.webp" alt=""></button>
+    <button class="rBtn" id="bMissoes" aria-label="Missões"><img src="assets/img/ic_missoes.webp" alt=""><em class="dot hidden" id="dMissao"></em></button>
+    <button class="rBtn" id="bCeleiro" aria-label="Celeiro"><img src="assets/img/ic_inventario.webp" alt=""><em class="cnt" id="dCeleiro">0</em></button>
+  </div>
+  <!-- coluna direita: mapa e zoom -->
+  <div class="side sideR">
+    <button class="rBtn" id="bMapa" aria-label="Mapa da Mantiqueira"><img src="assets/img/ic_mapa.webp" alt=""></button>
+    <div class="zoomBox" id="zoomBox">
+      <button id="zIn" aria-label="Aproximar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="zOut" aria-label="Afastar"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <button id="zAll" aria-label="Visão geral do mapa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button id="zHome" aria-label="Centralizar na fazenda"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg></button>
     </div>
   </div>
 
-  <div class="side">
-    <button class="sBtn" id="bMissoes"><img src="assets/img/ic_missoes.webp" alt=""><span>Missões</span><em class="dot hidden" id="dMissao"></em></button>
-    <button class="sBtn" id="bCeleiro"><img src="assets/img/ic_inventario.webp" alt=""><span>Celeiro</span><em class="cnt" id="dCeleiro">0</em></button>
-    <button class="sBtn" id="bMapa"><img src="assets/img/ic_mapa.webp" alt=""><span>Mapa</span></button>
-    <button class="sBtn" id="bConfig"><img src="assets/img/ic_config.webp" alt=""><span>Ajustes</span></button>
-  </div>
-
+  <!-- missão atual: etiqueta pequena -->
   <button class="mChip" id="mChip"><b id="mTitulo"></b><span id="mTexto"></span><i class="mbar"><i id="mFill"></i></i></button>
-
-  <div class="zoomBox" id="zoomBox">
-    <button id="zIn" aria-label="Aproximar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-    <button id="zOut" aria-label="Afastar"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
-    <button id="zAll" aria-label="Visão geral do mapa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <button id="zHome" aria-label="Centralizar na fazenda"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg></button>
-  </div>
 
   <div class="plantBar hidden" id="plantBar"><img id="pbIcon" alt=""><span id="pbTxt"></span><button id="pbOk">Concluir</button></div>
 
+  <!-- embaixo: Construir e Mercado nos cantos; ações rápidas no meio -->
   <nav class="bottom">
-    <button data-a="plantar"><img src="assets/img/saco.webp" alt=""><span>Plantar</span></button>
-    <button data-a="colher"><img src="assets/img/cesto.webp" alt=""><span>Colher</span><em class="cnt hidden" id="dColher">0</em></button>
-    <button data-a="animais"><img src="assets/img/vaca3.webp" alt=""><span>Animais</span><em class="cnt hidden" id="dAnimais">0</em></button>
-    <button data-a="construir"><img src="assets/img/ic_construir.webp" alt=""><span>Construir</span></button>
-    <button data-a="produzir"><img src="assets/img/ic_produzir.webp" alt=""><span>Produzir</span><em class="cnt hidden" id="dProduzir">!</em></button>
+    <button class="big" data-a="construir"><img src="assets/img/ic_construir.webp" alt=""><span>Construir</span></button>
+    <div class="quick">
+      <button data-a="plantar"><img src="assets/img/saco.webp" alt=""><span>Plantar</span></button>
+      <button data-a="colher"><img src="assets/img/cesto.webp" alt=""><span>Colher</span><em class="cnt hidden" id="dColher">0</em></button>
+      <button data-a="animais"><img src="assets/img/vaca3.webp" alt=""><span>Animais</span><em class="cnt hidden" id="dAnimais">0</em></button>
+      <button data-a="produzir"><img src="assets/img/ic_produzir.webp" alt=""><span>Produzir</span><em class="cnt hidden" id="dProduzir">!</em></button>
+    </div>
+    <button class="big" data-a="mercado"><img src="assets/img/caixa.webp" alt=""><span>Mercado</span></button>
   </nav>
 </div>
 
@@ -71,7 +69,6 @@
 
 <div id="loading"><div class="ldBox"><h1>Conecta Fazenda</h1><p>Vale da Mantiqueira</p><div class="ldBar"><i id="ldFill"></i></div><small id="ldTxt">Carregando a fazenda…</small></div></div>
 
-<div id="gireAviso" class="hidden"><div><svg viewBox="0 0 64 64"><rect x="20" y="8" width="24" height="44" rx="5" fill="none" stroke="#fff" stroke-width="3.5"/><path d="M50 40c6-4 8-12 4-19" fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round"/><path d="M57 18l-3 4-4-3" fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Vire o celular de lado</b><small>O Conecta Fazenda é jogado na horizontal</small></div></div>
 </div>
 <script type="module" src="src/main.js"></script>
 </body>

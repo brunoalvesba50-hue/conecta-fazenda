@@ -1,70 +1,25 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-/* tela do jogo: sempre na horizontal. Com o celular em pé, o jogo inteiro é girado 90° (o jogador vira o celular) */
+/* tela do jogo: --W/--H = tamanho útil da tela (prioridade: celular na vertical) */
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);--W:100vw;--H:100vh}
 #tela{position:fixed;left:0;top:0;width:var(--W);height:var(--H);overflow:hidden}
-body.girado{--sat:0px;--sab:0px;--sal:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-bottom,0px)}
-body.girado #tela{left:100%;transform-origin:0 0;transform:rotate(90deg)}
 html,body{margin:0;height:100%;overflow:hidden;background:#3c6b2c;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#3a2a10;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
 #game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .hidden{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer}
-
 /* ---------- topo ---------- */
-.hTop{position:fixed;left:0;right:0;top:0;padding:calc(var(--sat) + 8px) calc(10px + var(--sar)) 0 calc(10px + var(--sal));display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none;z-index:5}
-.farmCard{pointer-events:auto;display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,rgba(28,58,86,.92),rgba(20,42,64,.92));border-radius:16px 22px 22px 16px;padding:5px 12px 5px 5px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:1.5px solid rgba(255,255,255,.25);color:#fff;max-width:calc(var(--W) - 150px)}
-.avatar{width:50px;height:50px;border-radius:50%;overflow:hidden;background:linear-gradient(#f9e7c2,#e8c98e);border:2.5px solid #f3d27a;flex:none}
-.avatar img{width:100%;height:auto;margin-top:-1px;transform:scale(1.9);transform-origin:50% 12%}
-.farmInfo{display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.farmInfo b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.farmInfo span{display:flex;align-items:center;gap:3px;font-size:11.5px;opacity:.92;white-space:nowrap}
-.farmInfo span svg{width:13px;height:13px;flex:none}
-.farmInfo i{font-style:normal;overflow:hidden;text-overflow:ellipsis}
-.lvl{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;column-gap:4px;margin-left:4px}
 .star{grid-row:1/3;position:relative;width:36px;height:36px}
 .star svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
 .star b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px;color:#6b3d00;padding-top:2px}
 .xpbar{width:70px;height:9px;border-radius:9px;background:rgba(0,0,0,.4);overflow:hidden;align-self:end}
 .xpbar i{display:block;height:100%;width:0;background:linear-gradient(#ffd166,#f39c12);border-radius:9px;transition:width .4s}
-.lvl small{font-size:10.5px;opacity:.9;align-self:start}
-.res{pointer-events:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.pill{display:flex;align-items:center;gap:6px;background:rgba(20,42,64,.88);border:1.5px solid rgba(255,255,255,.25);border-radius:22px;padding:4px 4px 4px 4px;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.28)}
-.pill b{min-width:44px;text-align:right;font-size:16px;font-variant-numeric:tabular-nums}
 .coin{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff7b0 0 12%,#f8cd3a 40%,#d38f0c 100%);box-shadow:inset 0 0 0 2px #b67908,0 2px 3px rgba(0,0,0,.3);position:relative;flex:none}
 .coin::after{content:"";position:absolute;inset:7px;border-radius:50%;border:2px solid rgba(160,100,5,.55)}
 .plus{width:28px;height:28px;border-radius:50%;border:0;background:linear-gradient(#5ed65e,#2f9e3a);color:#fff;font-weight:900;font-size:20px;line-height:1;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
-
 /* ---------- lateral ---------- */
-.side{position:fixed;left:calc(8px + var(--sal));top:calc(var(--sat) + 74px);display:flex;flex-direction:column;gap:8px;z-index:5}
-.sBtn{position:relative;width:62px;padding:4px 0 3px;border-radius:16px;border:2px solid rgba(255,255,255,.35);background:linear-gradient(180deg,rgba(32,64,92,.9),rgba(20,42,64,.92));color:#fff;display:flex;flex-direction:column;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,.28)}
-.sBtn img{width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
-.sBtn span{font-size:11px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-.dot{position:absolute;right:-3px;top:-3px;width:14px;height:14px;border-radius:50%;background:#e53935;border:2px solid #fff}
-.cnt{position:absolute;right:-5px;top:-5px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;background:#e53935;color:#fff;font-style:normal;font-size:12px;font-weight:900;display:grid;place-items:center;border:2px solid #fff}
-.sBtn .cnt{background:#2f7d32}
-
 /* ---------- missão atual ---------- */
-.mChip{position:fixed;right:calc(10px + var(--sar));top:calc(var(--sat) + 56px);z-index:5;width:min(210px,calc(var(--W) * .46));text-align:left;border:0;border-radius:14px;padding:8px 10px;background:rgba(255,248,230,.95);box-shadow:0 4px 12px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:2px}
-.mChip b{font-size:12.5px;color:#7a4b0c}
-.mChip span{font-size:12px;color:#3a2a10}
-.mbar{display:block;height:7px;border-radius:7px;background:#e6d6b2;overflow:hidden;margin-top:3px}
-.mbar i{display:block;height:100%;width:0;background:linear-gradient(#7fd65c,#3ea33a);transition:width .4s}
-.mChip.done{background:linear-gradient(#fff4bf,#ffe18a);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(1.04)}}
-
 /* ---------- plantar várias ---------- */
-.plantBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 104px);z-index:6;display:flex;align-items:center;gap:8px;background:rgba(20,42,64,.92);color:#fff;border-radius:24px;padding:6px 6px 6px 10px;box-shadow:0 6px 18px rgba(0,0,0,.3);max-width:calc(var(--W) - 20px)}
-.plantBar img{width:30px;height:30px;object-fit:contain}
-.plantBar span{font-size:13.5px;font-weight:700}
-.plantBar button{border:0;border-radius:18px;padding:8px 14px;background:linear-gradient(#5ed65e,#2f9e3a);color:#fff;font-weight:900}
-
 /* ---------- barra de baixo ---------- */
-.bottom{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 10px);z-index:5;display:flex;gap:2px;padding:6px;background:linear-gradient(#fff9ec,#f1e2c0);border-radius:22px;box-shadow:0 6px 20px rgba(0,0,0,.32),inset 0 -3px 0 rgba(150,110,50,.25);border:2px solid #fffdf6;width:min(560px,calc(var(--W) - 16px))}
-.bottom button{position:relative;flex:1;min-width:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0 2px;border-radius:16px}
-.bottom button:active{background:rgba(160,120,60,.15);transform:scale(.96)}
-.bottom img{width:46px;height:42px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
-.bottom span{font-size:12.5px;font-weight:900;color:#4a3412}
-.bottom .cnt{right:6px;top:-6px}
-
 /* ---------- painel (folha de baixo) ---------- */
 #sheetBg{position:fixed;inset:0;background:rgba(10,20,10,.35);z-index:20}
 #sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:21;width:min(560px,var(--W));max-height:calc(var(--H) * .8);display:flex;flex-direction:column;background:linear-gradient(#fffaf0,#f5e8cb);border-radius:24px 24px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.35);border:2px solid #fffef8;border-bottom:0;padding-bottom:var(--sab);animation:up .22s ease-out}
@@ -92,7 +47,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .cell{background:#fffdf7;border:1.5px solid #ecdcb8;border-radius:16px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
 .cell img{width:52px;height:52px;object-fit:contain}
-.cell b{font-size:13px}.cell small{font-size:11.5px;color:#7a6440}
+.cell b{font-size:13px}
+.cell small{font-size:11.5px;color:#7a6440}
 .cap{display:flex;align-items:center;gap:8px;margin:0 2px 10px;font-weight:800;font-size:13px}
 .cap .bar{flex:1;height:10px;border-radius:10px;background:#e6d6b2;overflow:hidden}
 .cap .bar i{display:block;height:100%;background:linear-gradient(#7fd65c,#3ea33a)}
@@ -100,7 +56,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .need{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
 .need span{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:800;background:#f3e6c6;border-radius:10px;padding:2px 7px 2px 3px}
 .need span img{width:22px;height:22px;object-fit:contain}
-.need span.ok{background:#d9f2cf;color:#1f6b25}.need span.no{background:#fbe0da;color:#a33222}
+.need span.ok{background:#d9f2cf;color:#1f6b25}
+.need span.no{background:#fbe0da;color:#a33222}
 .tabs{display:flex;gap:6px;margin:0 0 10px}
 .tabs button{flex:1;border:0;border-radius:12px;padding:9px;font-weight:900;background:#ead8b0;color:#6a4a14}
 .tabs button.on{background:linear-gradient(#5ed65e,#2f9e3a);color:#fff}
@@ -109,9 +66,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .mission p{margin:0 0 8px;font-size:14px}
 .mission .rw{display:flex;gap:10px;align-items:center;font-weight:900;font-size:13px;margin:8px 0}
 .city{display:flex;align-items:center;gap:10px;border-radius:16px;padding:12px;margin-bottom:8px;background:#fffdf7;border:1.5px solid #ecdcb8}
-.city b{flex:1}.city.on{border-color:#4caf50;background:#effae9}
+.city b{flex:1}
+.city.on{border-color:#4caf50;background:#effae9}
 .city .lk{font-size:12px;font-weight:800;color:#8a7348;background:#efe2c2;border-radius:10px;padding:4px 8px}
-
 #toast{position:fixed;left:50%;top:calc(var(--sat) + 120px);transform:translateX(-50%);z-index:40;background:rgba(20,42,64,.94);color:#fff;padding:10px 16px;border-radius:18px;font-weight:800;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.3);max-width:calc(var(--W) - 30px);text-align:center;pointer-events:none;animation:tin .2s ease-out}
 #toast.err{background:rgba(160,40,30,.95)}
 @keyframes tin{from{opacity:0;transform:translate(-50%,-8px)}}
@@ -123,7 +80,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .mBox .bigStar{width:90px;height:90px;margin:-58px auto 6px;position:relative}
 .mBox .bigStar svg{width:100%;height:100%;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
 .mBox .bigStar b{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;color:#6b3d00;padding-top:6px}
-
 #loading{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#4f8f3a,#24461c)}
 .ldBox{text-align:center;color:#fff;width:min(300px,80%)}
 .ldBox h1{margin:0;font-size:34px;letter-spacing:.5px;text-shadow:0 3px 8px rgba(0,0,0,.4)}
@@ -131,79 +87,75 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ldBar{height:12px;border-radius:12px;background:rgba(0,0,0,.35);overflow:hidden}
 .ldBar i{display:block;height:100%;width:0;background:linear-gradient(#ffd166,#f39c12);transition:width .2s}
 .ldBox small{display:block;margin-top:8px;opacity:.85}
-
-body.estreito .farmCard{gap:6px;padding-right:8px}
-body.estreito .avatar{width:42px;height:42px}
-body.estreito .farmInfo b{font-size:13.5px}
-body.estreito .farmInfo span{font-size:10.5px}
-body.estreito .xpbar{width:46px}
-body.estreito .star{width:30px;height:30px}
-body.estreito .star b{font-size:12px}
-body.estreito .lvl small{font-size:9.5px}
-body.estreito .pill b{min-width:36px;font-size:15px}
-body.estreito .coin{width:24px;height:24px}
-body.estreito .plus{width:26px;height:26px}
-body.estreito .mChip{width:min(180px,calc(var(--W) * .44));padding:6px 9px}
-body.estreito .mChip b{font-size:11.5px}
-body.estreito .mChip span{font-size:11px}
-body.estreito .sBtn{width:54px}
-body.estreito .sBtn img{width:32px;height:32px}
-body.estreito .sBtn span{font-size:10px}
-body.estreito .bottom img{width:40px;height:36px}
-body.estreito .bottom span{font-size:11.5px}
-body.estreito .mChip{top:calc(var(--sat) + 62px)}
-
-@media (min-width:900px){ .side{top:90px;left:14px} .sBtn{width:70px} .sBtn img{width:44px;height:44px} }
-
 /* ---------- zoom ---------- */
-.zoomBox{position:fixed;right:calc(10px + var(--sar));bottom:calc(var(--sab) + 104px);z-index:5;display:flex;flex-direction:column;gap:6px}
-.zoomBox button{width:44px;height:44px;border-radius:14px;border:2px solid rgba(255,255,255,.35);background:linear-gradient(180deg,rgba(32,64,92,.9),rgba(20,42,64,.92));display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.28);padding:0}
-.zoomBox button:active{transform:scale(.94)}
-.zoomBox svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.zoomBox button:disabled{opacity:.45}
-body.estreito .zoomBox{bottom:calc(var(--sab) + 96px);right:8px}
-body.estreito .zoomBox button{width:40px;height:40px}
-
-
-#game{cursor:grab}#game:active{cursor:grabbing}
+#game{cursor:grab}
+#game:active{cursor:grabbing}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
 /* aviso de virar o celular (aparece rapidinho quando o jogo gira) */
-#gireAviso{position:absolute;inset:0;z-index:90;display:grid;place-items:center;background:rgba(10,25,10,.55);pointer-events:none;animation:gireSome 2.6s ease forwards}
-#gireAviso div{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;text-align:center;background:rgba(20,42,64,.92);padding:18px 26px;border-radius:22px}
-#gireAviso svg{width:64px;height:64px;animation:gira 1.2s ease-in-out infinite alternate}
-#gireAviso b{font-size:18px}#gireAviso small{opacity:.85}
-@keyframes gira{to{transform:rotate(-90deg)}}
-@keyframes gireSome{0%,70%{opacity:1}100%{opacity:0}}
 /* horizontal com pouca altura (celular de lado): interface compacta, sobra mais fazenda */
-body.compacto .farmCard{gap:6px;padding:3px 10px 3px 3px}
-body.compacto .avatar{width:34px;height:34px;border-width:2px}
-body.compacto .farmInfo b{font-size:12.5px}
-body.compacto .farmInfo span{font-size:10px}
-body.compacto .star{width:26px;height:26px}
-body.compacto .star b{font-size:11px}
-body.compacto .xpbar{width:52px;height:7px}
-body.compacto .lvl small{font-size:9px}
-body.compacto .hTop{padding-top:calc(var(--sat) + 5px)}
-body.compacto .pill{padding:2px}
-body.compacto .pill b{font-size:14px;min-width:34px}
-body.compacto .coin{width:22px;height:22px}
-body.compacto .plus{width:24px;height:24px;font-size:17px}
-body.compacto .side{top:calc(var(--sat) + 52px);gap:5px}
-body.compacto .sBtn{width:48px;border-radius:12px;padding:2px 0}
-body.compacto .sBtn img{width:26px;height:26px}
-body.compacto .sBtn span{font-size:9.5px}
-body.compacto .mChip{top:calc(var(--sat) + 42px);width:min(170px,calc(var(--W) * .3));padding:5px 8px}
-body.compacto .mChip b{font-size:11px}
-body.compacto .mChip span{font-size:10.5px}
-body.compacto .bottom{bottom:calc(var(--sab) + 5px);width:min(430px,calc(var(--W) - 140px));padding:3px;border-radius:16px}
-body.compacto .bottom img{width:30px;height:26px}
-body.compacto .bottom span{font-size:10.5px}
-body.compacto .bottom button{padding:2px 0 1px}
-body.compacto .zoomBox{bottom:calc(var(--sab) + 6px);gap:4px}
-body.compacto .zoomBox button{width:34px;height:34px;border-radius:10px}
-body.compacto .zoomBox svg{width:18px;height:18px}
-body.compacto .plantBar{bottom:calc(var(--sab) + 60px)}
-body.compacto #toast{top:calc(var(--sat) + 60px)}
-body.compacto #sheet{max-height:calc(var(--H) * .92)}
 
+/* ================= interface minimalista (estilo jogo de fazenda) =================
+   Alto: nível à esquerda, moedas à direita. Colunas finas de botões redondos nos lados.
+   Embaixo: Construir e Mercado nos cantos, ações rápidas no meio. O resto da tela é a fazenda. */
+#game{cursor:grab}#game:active{cursor:grabbing}
+.hLvl{position:fixed;left:calc(10px + var(--sal));top:calc(var(--sat) + 8px);z-index:5;display:flex;align-items:center;gap:2px;pointer-events:none}
+.hLvl .star{position:relative;width:46px;height:46px;flex:none;z-index:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.hLvl .star svg{width:100%;height:100%}
+.hLvl .star b{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;font-weight:900;color:#6b3d00;padding-top:3px}
+.xpbar{position:relative;width:118px;height:18px;border-radius:10px;background:rgba(11,22,32,.78);border:1.5px solid rgba(255,255,255,.35);overflow:hidden}
+.xpbar i{display:block;height:100%;width:0;background:linear-gradient(#5fb8ff,#17649f);transition:width .4s}
+.xpbar small{position:absolute;inset:0;display:grid;place-items:center;font-size:10.5px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.reg{display:flex;align-items:center;gap:2px;padding-left:12px;font-size:10.5px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.75);white-space:nowrap}
+.reg svg{width:12px;height:12px;flex:none}.reg i{font-style:normal}
+.hRes{position:fixed;right:calc(10px + var(--sar));top:calc(var(--sat) + 10px);z-index:5}
+.pill{display:flex;align-items:center;gap:6px;background:rgba(11,22,32,.82);border:1.5px solid rgba(255,255,255,.3);border-radius:22px;padding:3px;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.pill b{min-width:40px;text-align:right;font-size:15px;font-variant-numeric:tabular-nums}
+.side{position:fixed;z-index:5;display:flex;flex-direction:column;gap:8px;top:calc(var(--sat) + 70px)}
+.sideL{left:calc(10px + var(--sal))}.sideR{right:calc(10px + var(--sar));align-items:flex-end}
+.rBtn{position:relative;width:46px;height:46px;border-radius:50%;border:2px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 30%,#2b7cc0,#123552);display:grid;place-items:center;padding:0;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.rBtn img{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.rBtn:active{transform:scale(.93)}
+.dot{position:absolute;right:-2px;top:-2px;width:14px;height:14px;border-radius:50%;background:#e64d4d;border:2px solid #fff}
+.cnt{position:absolute;right:-6px;top:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e64d4d;color:#fff;font-style:normal;font-size:11px;font-weight:900;display:grid;place-items:center;border:2px solid #fff}
+.rBtn .cnt{background:#2b511b}
+.zoomBox{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.zoomBox button{width:38px;height:38px;border-radius:12px;border:1.5px solid rgba(255,255,255,.4);background:rgba(11,22,32,.72);display:grid;place-items:center;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.zoomBox button:active{transform:scale(.93)}.zoomBox button:disabled{opacity:.4}
+.zoomBox svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.mChip{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 62px);z-index:5;max-width:min(260px,calc(var(--W) - 140px));text-align:left;border:0;border-radius:14px;padding:6px 10px;background:rgba(246,237,220,.95);box-shadow:0 3px 10px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:1px}
+.mChip b{font-size:11.5px;color:#7a4b0c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mChip span{font-size:11.5px;color:#3a2a10;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbar{display:block;height:5px;border-radius:5px;background:#e6d6b2;overflow:hidden;margin-top:2px}
+.mbar i{display:block;height:100%;width:0;background:linear-gradient(#7fd65c,#3ea33a);transition:width .4s}
+.mChip.done{background:linear-gradient(#fff4bf,#ffe18a);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:translateX(-50%) scale(1.04)}}
+.plantBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 98px);z-index:6;display:flex;align-items:center;gap:8px;background:rgba(11,22,32,.92);color:#fff;border-radius:24px;padding:6px 6px 6px 10px;box-shadow:0 6px 18px rgba(0,0,0,.3);max-width:calc(var(--W) - 20px)}
+.plantBar img{width:30px;height:30px;object-fit:contain}.plantBar span{font-size:13px;font-weight:700}
+.plantBar button{border:0;border-radius:18px;padding:8px 14px;background:linear-gradient(#5ed65e,#20c957);color:#fff;font-weight:900}
+.bottom{position:fixed;left:calc(8px + var(--sal));right:calc(8px + var(--sar));bottom:calc(var(--sab) + 8px);z-index:5;display:flex;align-items:flex-end;justify-content:space-between;gap:6px;pointer-events:none}
+.bottom button{pointer-events:auto;position:relative;border:0;padding:0;display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.bottom .big{width:72px;height:72px;border-radius:20px;border:2.5px solid rgba(255,255,255,.75);background:radial-gradient(circle at 35% 25%,#2b8fd6,#123552);box-shadow:0 4px 12px rgba(0,0,0,.35);justify-content:center;gap:1px}
+.bottom .big img{width:42px;height:38px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.bottom .big span{font-size:11.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.bottom .big:active{transform:scale(.94)}
+.quick{pointer-events:auto;display:flex;gap:4px;padding:4px;border-radius:18px;background:rgba(11,22,32,.55);margin-bottom:4px}
+.quick button{width:52px;padding:3px 0 2px;border-radius:14px;background:rgba(246,237,220,.95);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.quick button:active{transform:scale(.94)}
+.quick img{width:30px;height:26px;object-fit:contain}
+.quick span{font-size:9.5px;font-weight:900;color:#4a3412}
+.quick .cnt{right:-4px;top:-6px}
+/* telas finas */
+body.estreito .xpbar{width:96px}
+body.estreito .bottom .big{width:62px;height:62px;border-radius:18px}
+body.estreito .bottom .big img{width:34px;height:30px}
+body.estreito .bottom .big span{font-size:10.5px}
+body.estreito .quick button{width:46px}body.estreito .quick img{width:26px;height:22px}body.estreito .quick span{font-size:9px}
+@media (max-width:340px){.quick span{display:none}.quick button{width:40px}}
+/* pouca altura (celular deitado ou janela baixa) */
+body.compacto .side{top:calc(var(--sat) + 58px);gap:5px}
+body.compacto .rBtn{width:38px;height:38px}body.compacto .rBtn img{width:24px;height:24px}
+body.compacto .zoomBox button{width:32px;height:32px}
+body.compacto .bottom .big{width:58px;height:58px}body.compacto .bottom .big img{width:32px;height:28px}
+body.compacto .mChip{top:calc(var(--sat) + 8px)}
+body.compacto .plantBar{bottom:calc(var(--sab) + 76px)}
+@media (min-width:900px){.bottom .big{width:84px;height:84px}.quick button{width:64px}.quick img{width:36px;height:32px}.quick span{font-size:11px}}

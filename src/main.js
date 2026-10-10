@@ -75,21 +75,28 @@ $('shBody').addEventListener('click', e => { const b = e.target.closest('[data-a
 const needHtml = req => `<div class="need">${Object.entries(req).map(([k, q]) => { const tem = st.celeiro.itens[k] || 0; return `<span class="${tem >= q ? 'ok' : 'no'}"><img src="${src(PRODUTOS[k].icone)}" alt="">${Math.min(tem, q)}/${q} ${esc(PRODUTOS[k].nome)}</span>`; }).join('')}</div>`;
 
 let alvoCanteiro = null;
-function painelSementes(i) {
-  alvoCanteiro = i == null ? null : i;
-  abrir(i == null ? 'Sementes' : 'O que plantar aqui?', () => `<p class="sub">Escolha uma semente. Depois toque nos canteiros vazios para plantar.</p>` + Object.entries(CULTURAS).map(([k, c]) => {
+const htmlSementes = () => `<p class="sub">Escolha uma semente. Depois toque nos canteiros vazios para plantar.</p>` + Object.entries(CULTURAS).map(([k, c]) => {
     const tem = st.sementes[k] || 0, lock = st.nivel < c.nivel;
     return `<div class="row ${lock ? 'locked' : ''} ${S && S.plantMode === k ? 'sel' : ''}"><img class="ic" src="${src(k + '_' + c.stages)}" alt=""><div class="tx"><b>${c.nome}</b><small>${lock ? `Libera no nível ${c.nivel}` : `Cresce em ${G.fmtTempo(c.tempo)} · rende ${c.rende} · vende por ${c.venda}`}</small><small>Você tem <b>${tem}</b> semente${tem === 1 ? '' : 's'}</small></div><div class="btns">${lock ? '' : `<button class="b y" data-act="comprar:${k}:1" ${st.moedas < c.semente ? 'disabled' : ''}>+1 ${coinH}${c.semente}</button><button class="b y" data-act="comprar:${k}:5" ${st.moedas < c.semente * 5 ? 'disabled' : ''}>+5 ${coinH}${c.semente * 5}</button><button class="b" data-act="escolher:${k}" ${tem ? '' : 'disabled'}>Plantar</button>`}</div></div>`;
-  }).join(''), 'sementes');
+  }).join('');
+function painelSementes(i) {
+  alvoCanteiro = i == null ? null : i;
+  abrir(i == null ? 'Sementes' : 'O que plantar aqui?', htmlSementes, 'sementes');
 }
-function painelCeleiro() {
-  abrir('Celeiro', () => {
+const htmlCeleiro = () => {
     const cap = G.capCeleiro(st), uso = G.usoCeleiro(st), m = CELEIRO.melhorias[st.celeiro.melhoria];
     const itens = Object.entries(st.celeiro.itens).filter(([, q]) => q > 0);
     return `<div class="cap">Guardado ${uso}/${cap}<div class="bar"><i class="${uso >= cap ? 'full' : ''}" style="width:${Math.min(100, uso / cap * 100)}%"></i></div></div>`
       + (itens.length ? `<div class="grid">${itens.map(([k, q]) => `<div class="cell"><img src="${src(PRODUTOS[k].icone)}" alt=""><b>${esc(PRODUTOS[k].nome)} ×${q}</b><small>${PRODUTOS[k].venda} moedas cada</small><div class="btns"><button class="b y" data-act="vender:${k}:1">Vender 1</button>${q > 1 ? `<button class="b g" data-act="vender:${k}:${q}">Tudo</button>` : ''}</div></div>`).join('')}</div>` : `<p class="sub">O celeiro está vazio. Colha as plantações e colete leite e ovos.</p>`)
       + `<div class="row" style="margin-top:12px"><img class="ic" src="${src('caixa')}" alt=""><div class="tx"><b>Melhorar celeiro</b><small>${m ? `Passa a guardar ${m.cap} itens${st.nivel < m.nivel ? ` · nível ${m.nivel}` : ''}` : 'Celeiro no tamanho máximo'}</small></div>${m ? `<button class="b y" data-act="melhorar" ${st.nivel < m.nivel || st.moedas < m.custo ? 'disabled' : ''}>${coinH}${m.custo}</button>` : ''}</div>`;
-  }, 'celeiro');
+  };
+function painelCeleiro() {
+  abrir('Celeiro', htmlCeleiro, 'celeiro');
+}
+let abaMercado = 'comprar';
+function painelMercado(aba) {
+  if (aba) abaMercado = aba; alvoCanteiro = null;
+  abrir('Mercado da Fazenda', () => `<div class="tabs"><button class="${abaMercado === 'comprar' ? 'on' : ''}" data-act="mercado:comprar">Comprar sementes</button><button class="${abaMercado === 'vender' ? 'on' : ''}" data-act="mercado:vender">Vender produtos</button></div>` + (abaMercado === 'vender' ? htmlCeleiro() : htmlSementes()), 'mercado');
 }
 function painelAnimais() {
   abrir('Animais', () => {
@@ -183,6 +190,7 @@ const ACOES = {
   trocar: i => resultado(G.trocarEntrega(st, +i)),
   resgatar: () => resultado(G.resgatarMissao(st), r => toast(r.msg)),
   aba: a => painelMissoes(a),
+  mercado: a => painelMercado(a),
   ir: a => ({ celeiro: painelCeleiro, entregas: () => painelMissoes('entregas'), missoes: () => painelMissoes('missoes'), produzir: painelProduzir })[a](),
   reset: () => { if (!confirm('Apagar a fazenda deste aparelho? Isso não pode ser desfeito.')) return; apagarSave(); st = null; location.reload(); },
 };
@@ -230,6 +238,7 @@ document.querySelector('.bottom').addEventListener('click', e => {
   else if (a === 'animais') painelAnimais();
   else if (a === 'construir') painelConstruir();
   else if (a === 'produzir') painelProduzir();
+  else if (a === 'mercado') painelMercado();
 });
 $('bMissoes').onclick = () => painelMissoes('missoes');
 $('mChip').onclick = () => { const m = G.missaoAtual(st); if (m && m.completa) ACOES.resgatar(); else painelMissoes('missoes'); };
@@ -239,14 +248,19 @@ const FAZENDA = { x: 900, y: 980 };
    e aproveita a altura (Pedra do Baú → fazenda → pasto → parte de baixo); na horizontal, como antes */
 function visaoInicial() {
   const retrato = E.vh > E.vw * 1.1;
-  if (retrato) { const z = Math.min(E.maxZoom, Math.max(E.minZoom, E.vw / 1120)); return { x: 916, y: 20 + E.vh / z / 2, z }; }
+  if (retrato) {
+    /* mostra de x≈350 (casa) a x≈1460 (celeiro) e do céu até o pasto */
+    const z = Math.min(E.maxZoom, Math.max(E.minZoom, E.vw / 1000));
+    return { x: 912, y: 20 + E.vh / z / 2, z };
+  }
   if (E.vh <= 520) {
     /* celular de lado: casa, celeiro, canteiros e animais na tela de uma vez */
     const z = Math.min(E.maxZoom, Math.max(E.coverZoom, Math.min(E.vw / 1150, E.vh / 880))), alt = E.vh / z;
     return { x: 905, y: Math.max(20, 1185 - (E.vh - 66) / z) + alt / 2, z };
   }
-  const cel = E.vw < 700, z = Math.max(E.coverZoom, cel ? .68 : .74);
-  return { x: cel ? 860 : 900, y: 30 + E.vh / z / 2, z };
+  /* tela larga: canteiros sempre acima da barra de baixo; sobe o quanto der para mostrar a serra */
+  const cel = E.vw < 700, z = Math.max(E.coverZoom, cel ? .68 : .74), alt = E.vh / z;
+  return { x: cel ? 860 : 900, y: Math.max(20, 1200 - (E.vh - 110) / z) + alt / 2, z };
 }
 let mexeu = false; ['pointerdown', 'wheel'].forEach(t => $('game').addEventListener(t, () => { mexeu = true; }, { passive: true }));
 $('zIn').onclick = () => E.zoomTo(E.cam.zoom * 1.35);
@@ -256,31 +270,21 @@ $('zHome').onclick = () => { const v = visaoInicial(); E.flyTo(v.x, v.y, v.z); }
 setInterval(() => { if (!E) return; $('zIn').disabled = E.cam.zoom >= E.maxZoom - .001; $('zOut').disabled = E.cam.zoom <= E.minZoom + .001; }, 300);
 $('bCeleiro').onclick = painelCeleiro; $('bMapa').onclick = painelMapa; $('bConfig').onclick = painelAjustes; $('bGanhar').onclick = painelGanhar;
 
-/* ---------- sempre na horizontal ----------
-   Celular em pé: o jogo inteiro aparece girado 90° (é só virar o celular), como nos jogos de loja.
-   Celular deitado: normal. No Android, ao tocar a primeira vez, entra em tela cheia e trava de lado. */
-const toque = (() => { try { return matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window; } catch (_) { return false; } })();
-let girado = null;
-function avisoGire() { const a = $('gireAviso'); a.classList.remove('hidden'); a.style.animation = 'none'; void a.offsetWidth; a.style.animation = ''; clearTimeout(avisoGire.t); avisoGire.t = setTimeout(() => a.classList.add('hidden'), 2700); }
+/* ---------- tela ----------
+   Prioridade: celular na vertical. O jogo usa a tela como ela está (em pé ou deitado), sem girar nada.
+   --W/--H guardam o tamanho útil; "compacto" = pouca altura (deitado), "estreito" = tela fina. */
+let girado = false;
 function ajustaTela() {
-  const iw = window.innerWidth, ih = window.innerHeight, g = toque && ih > iw;
-  const W = g ? ih : iw, H = g ? iw : ih, b = document.body, r = document.documentElement.style;
-  b.classList.toggle('girado', g); b.classList.toggle('compacto', H <= 520); b.classList.toggle('estreito', W <= 480);
+  const W = window.innerWidth, H = window.innerHeight, b = document.body, r = document.documentElement.style;
+  b.classList.toggle('compacto', H <= 520); b.classList.toggle('estreito', W <= 480);
   r.setProperty('--W', W + 'px'); r.setProperty('--H', H + 'px');
-  if (g && girado === false && E) avisoGire();
-  const mudou = girado !== null && girado !== g; girado = g;
+  const o = H > W, mudou = ajustaTela.o !== undefined && ajustaTela.o !== o; ajustaTela.o = o;
   if (E) { E.resize(); if (!mexeu || mudou) { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); } }
 }
 ajustaTela();
 ['resize', 'orientationchange'].forEach(t => window.addEventListener(t, () => setTimeout(ajustaTela, 60)));
 if (window.visualViewport) visualViewport.addEventListener('resize', () => setTimeout(ajustaTela, 60));
-const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-if (toque && !ios) document.addEventListener('pointerdown', function trava() {
-  document.removeEventListener('pointerdown', trava);
-  const el = document.documentElement;
-  try { (el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : Promise.reject()).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => {}); } catch (_) {}
-}, { once: true });
-window.CF_tela = () => ({ girado, W: girado ? innerHeight : innerWidth, H: girado ? innerWidth : innerHeight });
+window.CF_tela = () => ({ girado: false, W: innerWidth, H: innerHeight });
 
 /* ---------- início ---------- */
 (async function () {
@@ -294,7 +298,6 @@ window.CF_tela = () => ({ girado, W: girado ? innerHeight : innerWidth, H: girad
   window.CF = { get st() { return st; }, E, S, G, WORLD, salvar: salvarJa, pagina: (x, y) => girado ? [innerWidth - y, x] : [x, y] };
   $('hud').classList.remove('hidden'); atualizaHud();
   $('loading').remove();
-  if (girado) avisoGire();
   if (c.aviso) toast(c.aviso, true);
   else if (c.novo) setTimeout(() => toast('Bem-vindo! Toque em um canteiro para plantar.'), 400);
 })();

@@ -63,8 +63,9 @@ def run(viewport, mobile):
         check(f'[{tag}] na metade do tempo está numa fase do meio', e['tipo'] == 'crescendo' and 2 <= e['fase'] <= 4, e)
         avanca(31); e = ev("CF.G.estadoCanteiro(CF.st,0)")
         check(f'[{tag}] depois de 60s fica pronto para colher', e['tipo'] == 'pronto' and e['fase'] == 5, e)
-        pg.wait_for_timeout(1100)
-        check(f'[{tag}] botão Colher mostra quantos estão prontos', ev("document.getElementById('dColher').textContent") in ('3', '4'))
+        try: pg.wait_for_function("['3','4'].includes(document.getElementById('dColher').textContent)", timeout=4000)
+        except Exception: pass
+        check(f'[{tag}] botão Colher mostra quantos estão prontos', ev("document.getElementById('dColher').textContent") in ('3', '4'), ev("[document.getElementById('dColher').textContent,CF.st.canteiros.map((c,i)=>CF.G.estadoCanteiro(CF.st,i).tipo).join(',')]"))
         btn("nav.bottom button[data-a='colher']"); s = st()
         check(f'[{tag}] Colher colhe tudo de uma vez', s['celeiro']['itens'].get('milho', 0) >= 8, s['celeiro']['itens'])
         # 4) vender no celeiro
@@ -258,33 +259,45 @@ def run_extras():
         b.close()
 run_extras()
 
-def run_horizontal():
-    for (w, h) in [(360, 640), (375, 667), (390, 844), (430, 932), (844, 390), (667, 375), (932, 430)]:
+def run_telas():
+    for (w, h) in [(360, 640), (375, 667), (390, 844), (430, 932), (412, 915), (768, 1024), (844, 390), (1280, 800)]:
         with sync_playwright() as p:
             b = p.chromium.launch(executable_path=CHROME)
-            ctx = b.new_context(viewport={'width': w, 'height': h}, has_touch=True, is_mobile=True, device_scale_factor=2)
+            mob = w < 1000
+            ctx = b.new_context(viewport={'width': w, 'height': h}, has_touch=mob, is_mobile=mob and w < 900, device_scale_factor=2 if mob else 1)
             pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
             pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.wait_for_timeout(500)
-            tag = f'[celular {"em pé" if h > w else "deitado"} {w}x{h}]'
-            R = pg.evaluate("""(()=>{const vis=(b)=>{const a=CF.E.toScreen(b.x,b.y),c=CF.E.toScreen(b.x+b.w,b.y+b.h);return a.x>=-2&&c.x<=CF.E.vw+2&&a.y>=-2&&c.y<=CF.E.vh+2};
-              const ok=(x,y)=>{const s=CF.E.toScreen(x,y);return s.x>0&&s.x<CF.E.vw&&s.y>0&&s.y<CF.E.vh-60};
-              return {gir:document.body.classList.contains('girado'),land:CF.E.vw>CF.E.vh,casa:vis(CF.S.casa.bounds()),cel:vis(CF.S.celeiro.bounds()),
+            tag = f'[tela {w}x{h} {"em pé" if h > w else "deitada"}]'
+            R = pg.evaluate("""(()=>{const vis=(b)=>{const a=CF.E.toScreen(b.x,b.y),c=CF.E.toScreen(b.x+b.w,b.y+b.h);const x0=Math.max(0,a.x),x1=Math.min(CF.E.vw,c.x),y0=Math.max(0,a.y),y1=Math.min(CF.E.vh,c.y);return Math.max(0,x1-x0)*Math.max(0,y1-y0)/((c.x-a.x)*(c.y-a.y))};
+              const ok=(x,y)=>{const s=CF.E.toScreen(x,y);return s.x>0&&s.x<CF.E.vw&&s.y>0&&s.y<CF.E.vh-80};
+              const r=s=>document.querySelector(s).getBoundingClientRect();const dentro=s=>{const q=r(s);return q.left>=-1&&q.top>=-1&&q.right<=innerWidth+1&&q.bottom<=innerHeight+1};
+              const sobre=(a,b)=>{const p=r(a),q=r(b);return !(p.right<=q.left||q.right<=p.left||p.bottom<=q.top||q.bottom<=p.top)};
+              return {gir:document.body.classList.contains('girado'),vertical:CF.E.vh>CF.E.vw,casa:vis(CF.S.casa.bounds()),cel:vis(CF.S.celeiro.bounds()),
                 pl:CF.S.plots.slice(0,6).every(P=>ok(P.x,P.y)),uniforme:CF.E.sprites.every(s=>!s.img||Math.abs(s.sx-s.sy)<.03),
-                barra:(()=>{const r=document.querySelector('.bottom').getBoundingClientRect();return r.left>=-1&&r.top>=-1&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1})()}})()""")
-            check(f'{tag} jogo aparece na horizontal' + (' (girado)' if h > w else ''), R['land'] and R['gir'] == (h > w), R)
-            check(f'{tag} casa, celeiro e canteiros na tela ao abrir', R['casa'] and R['cel'] and R['pl'], R)
-            check(f'{tag} nada esticado e barra de botões dentro da tela', R['uniforme'] and R['barra'])
+                cantos:['.hLvl','.hRes','.sideL','.sideR','.bottom .big','.quick','.bottom .big:last-child'].every(dentro),
+                semSobrepor:!sobre('.hLvl','.hRes')&&!sobre('.sideL','.bottom')&&!sobre('.sideR','.bottom')&&!sobre('.quick','.bottom .big')&&!sobre('.quick','.bottom .big:last-child')}})()""")
+            check(f'{tag} sem giro: o jogo usa a tela como está', not R['gir'] and R['vertical'] == (h > w), R)
+            check(f'{tag} casa e celeiro aparecem (no máximo 15% cortado)', R['casa'] >= .85 and R['cel'] >= .85, (round(R['casa'], 2), round(R['cel'], 2)))
+            check(f'{tag} canteiros na tela ao abrir', R['pl'])
+            check(f'{tag} nada esticado', R['uniforme'])
+            check(f'{tag} interface nos cantos, dentro da tela e sem botões um em cima do outro', R['cantos'] and R['semSobrepor'], R)
             x, y = pg.evaluate("(()=>{const P=CF.S.plots[0];const s=CF.E.toScreen(P.x,P.y);return CF.pagina(s.x,s.y)})()")
-            pg.touchscreen.tap(x, y); pg.wait_for_timeout(400)
+            (pg.touchscreen.tap if mob else pg.mouse.click)(x, y); pg.wait_for_timeout(400)
             check(f'{tag} tocar no canteiro funciona (abre as sementes)', not pg.evaluate("document.getElementById('sheet').classList.contains('hidden')"))
+            pg.click('#shClose', force=True); pg.wait_for_timeout(200)
+            pg.click("nav.bottom button[data-a='mercado']", force=True); pg.wait_for_timeout(300)
+            check(f'{tag} Mercado abre com as abas comprar e vender', 'Comprar sementes' in pg.evaluate("document.getElementById('shBody').innerText") and pg.evaluate("document.getElementById('shTitle').textContent") == 'Mercado da Fazenda')
+            pg.click("[data-act='mercado:vender']", force=True); pg.wait_for_timeout(250)
+            check(f'{tag} aba vender mostra o celeiro', 'Guardado' in pg.evaluate("document.getElementById('shBody').innerText"))
             pg.click('#shClose', force=True); pg.wait_for_timeout(200)
             pg.evaluate("CF.E.setZoom(1);CF.E.centerOn(900,900)"); pg.wait_for_timeout(100)
             c0 = pg.evaluate("CF.E.cam.x"); x0, y0 = pg.evaluate("CF.pagina(CF.E.vw/2,CF.E.vh/2)"); x1, y1 = pg.evaluate("CF.pagina(CF.E.vw/2-100,CF.E.vh/2)")
             pg.evaluate(f"""(()=>{{const cv=document.getElementById('game');const f=(t,x,y)=>cv.dispatchEvent(new PointerEvent(t,{{pointerId:1,clientX:x,clientY:y,bubbles:true,pointerType:'touch',isPrimary:true,buttons:t==='pointerup'?0:1}}));
               f('pointerdown',{x0},{y0});for(let k=1;k<=10;k++)f('pointermove',{x0}+({x1}-{x0})*k/10,{y0}+({y1}-{y0})*k/10);f('pointerup',{x1},{y1})}})()""")
-            check(f'{tag} arrastar para o lado move o mapa no sentido certo', abs(pg.evaluate("CF.E.cam.x") - c0 - 100 / pg.evaluate("CF.E.cam.zoom")) < 3, pg.evaluate("CF.E.cam.x") - c0)
+            check(f'{tag} arrastar move o mapa no sentido certo', abs(pg.evaluate("CF.E.cam.x") - c0 - 100) < 3, pg.evaluate("CF.E.cam.x") - c0)
+            pg.screenshot(path=f'/tmp/claude-0/cft/tela_{w}x{h}.png')
             check(f'{tag} sem erros de script', not errs, errs[:2])
             b.close()
-run_horizontal()
+run_telas()
 
 print(f"\n{len(res)} testes no total, {sum(1 for r in res if not r[1])} falhas")
