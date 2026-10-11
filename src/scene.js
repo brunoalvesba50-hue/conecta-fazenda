@@ -193,11 +193,18 @@ export function buildScene(E, IMG, api) {
   S.lotes = CASAS.map((c, k) => {
     const [x, y] = c.lote, L = { c, x, y };
     L.spr = add({ x, y, z: y, tag: 'vila_' + c.id,
-      hit: (wx, wy) => { const img = IMG['vila_' + c.id], w = 190, h = img.height * w / img.width; return api.state().casas[c.id] ? (wx > x - w / 2 && wx < x + w / 2 && wy > y - h && wy < y) : Math.abs(wx - x) / 92 + Math.abs(wy - (y - 30)) / 52 <= 1; },
+      hit: (wx, wy) => { const img = IMG['vila_' + c.id], w = 230, h = img.height * w / img.width; return api.state().casas[c.id] ? (wx > x - w / 2 && wx < x + w / 2 && wy > y - h && wy < y) : Math.abs(wx - x) / 92 + Math.abs(wy - (y - 30)) / 52 <= 1; },
       onTap: () => api.tapCasa(c.id),
       draw: cx => {
         const st = api.state();
-        if (st.casas[c.id]) { const img = IMG['vila_' + c.id], w = 190, h = img.height * w / img.width; cx.drawImage(img, x - w / 2, y - h, w, h); return; }
+        if (st.casas[c.id]) {
+          /* casa pronta: sombra no chão e quintal de terra, para assentar a casa no terreno */
+          const img = IMG['vila_' + c.id], w = 230, h = img.height * w / img.width;
+          cx.save(); cx.fillStyle = 'rgba(120,92,52,.38)'; cx.beginPath(); cx.ellipse(x, y - 14, w * .5, w * .19, 0, 0, Math.PI * 2); cx.fill();
+          const g = cx.createRadialGradient(x, y - 8, 4, x, y - 8, w * .46); g.addColorStop(0, 'rgba(20,30,10,.38)'); g.addColorStop(1, 'rgba(20,30,10,0)');
+          cx.fillStyle = g; cx.beginPath(); cx.ellipse(x, y - 8, w * .46, w * .15, 0, 0, Math.PI * 2); cx.fill(); cx.restore();
+          cx.drawImage(img, x - w / 2, y - h + 6, w, h); return;
+        }
         /* terreno: chão de terra batida, estacas e plaquinha "À venda" */
         cx.save(); cx.globalAlpha = .92; cx.fillStyle = 'rgba(150,105,55,.55)'; cx.beginPath(); cx.moveTo(x, y - 82); cx.lineTo(x + 92, y - 30); cx.lineTo(x, y + 22); cx.lineTo(x - 92, y - 30); cx.closePath(); cx.fill();
         cx.setLineDash([8, 6]); cx.lineWidth = 2.5; cx.strokeStyle = 'rgba(255,245,220,.8)'; cx.stroke(); cx.restore();

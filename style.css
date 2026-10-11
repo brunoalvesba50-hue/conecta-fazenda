@@ -122,7 +122,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .rBtn .cnt{background:#2b511b}
 .zoomBox{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .zoomBox button{width:38px;height:38px;border-radius:12px;border:1.5px solid rgba(255,255,255,.4);background:rgba(11,22,32,.72);display:grid;place-items:center;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.25)}
-.toque #zIn,.toque #zOut,.toque #zAll{display:none}
+.toque #zIn,.toque #zOut,.toque #zAll,.toque #rgIn,.toque #rgOut{display:none}
 .zoomBox button:active{transform:scale(.93)}.zoomBox button:disabled{opacity:.4}
 .zoomBox svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .mChip{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 62px);z-index:5;max-width:min(260px,calc(var(--W) - 140px));text-align:left;border:0;border-radius:14px;padding:6px 10px;background:rgba(246,237,220,.95);box-shadow:0 3px 10px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:1px}
@@ -182,6 +182,7 @@ body.compacto #tut{bottom:calc(var(--sab) + 70px)}body.compacto .tutFoto{width:6
 /* ================= mapa regional ================= */
 #regiao{position:fixed;inset:0;z-index:18;background:#0b1620}
 #rgCena{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab}
+#rgCena::before{content:'';position:absolute;inset:-60px;background:url(assets/img/mapa_regional.webp) center/cover;filter:blur(24px) brightness(.5) saturate(1.1)}
 #rgWrap{position:absolute;left:0;top:0;width:1536px;height:782px;transform-origin:0 0}
 #rgWrap img{width:1536px;height:782px;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
 .rgTopo{position:absolute;left:0;right:0;top:calc(var(--sat) + 8px);display:flex;align-items:center;justify-content:center;pointer-events:none;padding:0 10px}
@@ -197,11 +198,11 @@ body.compacto #tut{bottom:calc(var(--sab) + 70px)}body.compacto .tutFoto{width:6
 .rgLock{width:46px;height:46px;border-radius:50%;background:#123552;border:2px solid #f6eddc;display:grid;place-items:center}.rgLock svg{width:26px;height:26px}
 .rgNum{width:44px;height:44px;border-radius:50%;background:linear-gradient(#ffd166,#e3a35e);color:#4a2a0c;font-style:normal;font-weight:900;font-size:20px;display:grid;place-items:center;border:2px solid #fff}
 .rgTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-.rgTx b{font-size:18px;line-height:1.1}
+.rgTx b{font-size:22px;line-height:1.1}
 .rgBar{position:relative;height:18px;border-radius:9px;background:#0b1620;border:1.5px solid rgba(255,255,255,.25);overflow:hidden}
 .rgBar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#5ee87a,#20c957)}
 .rgBar em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:12px;color:#fff;text-shadow:0 1px 2px #000}
-.rgTx small{font-size:12px;color:#d8cdb6;line-height:1.2}
+.rgTx small{font-size:15px;color:#d8cdb6;line-height:1.2}
 .rg-concluida{border-color:#20c957}.rg-concluida small{color:#7dffa4;font-weight:800}
 .rg-bloqueada b{color:#c9c1b0}
 .obj{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#fffdf7;border:1.5px solid #ecdcb8;margin-bottom:6px;font-size:13.5px}

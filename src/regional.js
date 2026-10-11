@@ -20,15 +20,19 @@ export function criaRegional({ st, G, $, aoTocarCidade }) {
   const T = { k: 1, x: 0, y: 0 }, ptr = new Map(); let pinca = null, moveu = false;
 
   function limites() {
-    const W = cena.clientWidth, H = cena.clientHeight, min = Math.max(W / IMG_W, H / IMG_H);
-    return { W, H, min, max: min * 2.6 };
+    /* afastar até ver o mapa inteiro; aproximar até 2,6× o tamanho que cobre a tela */
+    const W = cena.clientWidth, H = cena.clientHeight, min = Math.min(W / IMG_W, H / IMG_H), cobre = Math.max(W / IMG_W, H / IMG_H);
+    return { W, H, min, cobre, max: Math.max(cobre * 2.6, 1.6) };
   }
   function aplica() {
     const L = limites(); T.k = Math.min(L.max, Math.max(L.min, T.k));
-    T.x = Math.min(0, Math.max(L.W - IMG_W * T.k, T.x)); T.y = Math.min(0, Math.max(L.H - IMG_H * T.k, T.y));
+    const w = IMG_W * T.k, h = IMG_H * T.k;  // menor que a tela: fica centralizado
+    T.x = w <= L.W ? (L.W - w) / 2 : Math.min(0, Math.max(L.W - w, T.x));
+    T.y = h <= L.H ? (L.H - h) / 2 : Math.min(0, Math.max(L.H - h, T.y));
+    $('rgIn').disabled = T.k >= L.max - 1e-6; $('rgOut').disabled = T.k <= L.min + 1e-6;
     wrap.style.transform = `translate(${T.x}px,${T.y}px) scale(${T.k})`;
   }
-  function centra(id) { const L = limites(), [px, py] = POS[id] || [IMG_W / 2, IMG_H / 2]; T.k = Math.max(L.min, Math.min(L.max, L.min * 1.15)); T.x = L.W / 2 - px * T.k; T.y = L.H / 2 - py * T.k; aplica(); }
+  function centra(id) { const L = limites(), [px, py] = POS[id] || [IMG_W / 2, IMG_H / 2]; T.k = Math.max(L.min, Math.min(L.max, L.W < L.H ? L.W / 760 : L.cobre)); T.x = L.W / 2 - px * T.k; T.y = L.H / 2 - py * T.k; aplica(); }
   function zoom(f, cx, cy) { const L = limites(); cx = cx == null ? L.W / 2 : cx; cy = cy == null ? L.H / 2 : cy; const k = Math.min(L.max, Math.max(L.min, T.k * f)); const wx = (cx - T.x) / T.k, wy = (cy - T.y) / T.k; T.k = k; T.x = cx - wx * k; T.y = cy - wy * k; aplica(); }
 
   /* etiquetas */
@@ -37,7 +41,7 @@ export function criaRegional({ st, G, $, aoTocarCidade }) {
     wrap.querySelectorAll('.rgCity').forEach(e => e.remove());
     for (const r of REGIOES) {
       const e = G.estadoCidade(s, r.id), [x0, y0, x1, y1] = BOX[r.id];
-      const req = e.tipo === 'bloqueada' ? `Desbloqueie após concluir ${e.requisito}` : e.tipo === 'em-breve' ? 'Área jogável em breve' : ROTULO[e.tipo];
+      const req = e.tipo === 'bloqueada' ? `Conclua ${e.requisito}` : e.tipo === 'em-breve' ? 'Área jogável em breve' : ROTULO[e.tipo];
       const ic = e.tipo === 'concluida' ? CHECK : e.tipo === 'bloqueada' ? `<i class="rgLock">${CADEADO}</i>` : `<i class="rgNum">${r.ordem}</i>`;
       wrap.insertAdjacentHTML('beforeend', `<button class="rgCity rg-${e.tipo}${s.regiaoSel === r.id ? ' sel' : ''}" data-id="${r.id}" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px"><span class="rgIc">${ic}</span><span class="rgTx"><b>${r.nome}</b><span class="rgBar"><i style="width:${e.pct}%"></i><em>${e.pct}%</em></span><small>${req}</small></span></button>`);
     }
