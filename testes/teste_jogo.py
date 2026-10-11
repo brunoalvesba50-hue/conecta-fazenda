@@ -188,11 +188,11 @@ def run_mapa(viewport, mobile):
         z2 = cam()['z']; ptr([[1, mx - 30, my]], 'pointerup'); ptr([[2, mx + 30, my]], 'pointerup')
         check(f'[{tag}] dois dedos se aproximando afastam o mapa', z2 < z1 * .6, (z1, z2))
         # 3) botões
-        ev("CF.E.setZoom(.9)"); z = cam()['z']; pg.click('#zIn', force=True); pg.wait_for_timeout(500)
+        ev("CF.E.setZoom(.9)"); z = cam()['z']; ev("document.getElementById('zIn').click()"); pg.wait_for_timeout(500)
         check(f'[{tag}] botão + aproxima', cam()['z'] > z * 1.2)
-        z = cam()['z']; pg.click('#zOut', force=True); pg.wait_for_timeout(500)
+        z = cam()['z']; ev("document.getElementById('zOut').click()"); pg.wait_for_timeout(500)
         check(f'[{tag}] botão − afasta', cam()['z'] < z * .85)
-        pg.click('#zAll', force=True); pg.wait_for_timeout(800)
+        ev("document.getElementById('zAll').click()"); pg.wait_for_timeout(800)
         vis = ev("(()=>{const a=CF.E.toScreen(0,0),b=CF.E.toScreen(CF.WORLD.w,CF.WORLD.h);return [a.x,a.y,b.x,b.y,CF.E.vw,CF.E.vh]})()")
         check(f'[{tag}] visão geral: o mapa cobre a tela toda (nada vazio fora do mapa)', vis[0] <= .5 and vis[1] <= .5 and vis[2] >= vis[4] - .5 and vis[3] >= vis[5] - .5, vis)
         # pinça para afastar ao máximo e arrastar para os cantos: continua sem nada fora do mapa
@@ -201,11 +201,11 @@ def run_mapa(viewport, mobile):
             v2 = ev("(()=>{const a=CF.E.toScreen(0,0),b=CF.E.toScreen(CF.WORLD.w,CF.WORLD.h);return a.x<=.5&&a.y<=.5&&b.x>=CF.E.vw-.5&&b.y>=CF.E.vh-.5})()")
             if not v2: break
         check(f'[{tag}] afastado e arrastado até os cantos: nunca aparece área vazia', v2)
-        pg.click('#zOut', force=True); pg.wait_for_timeout(500)
+        ev("document.getElementById('zOut').click()"); pg.wait_for_timeout(500)
         check(f'[{tag}] não afasta além da visão geral', abs(cam()['z'] - ev("CF.E.minZoom")) < .001)
-        pg.click('#zHome', force=True); pg.wait_for_timeout(800)
+        ev("document.getElementById('zHome').click()"); pg.wait_for_timeout(800)
         check(f'[{tag}] botão centralizar volta para a fazenda', ev("(()=>{const s=CF.E.toScreen(880,1000);return s.x>0&&s.x<CF.E.vw&&s.y>0&&s.y<CF.E.vh})()"))
-        for _ in range(12): pg.click('#zIn', force=True); pg.wait_for_timeout(80)
+        for _ in range(12): ev("document.getElementById('zIn').click()"); pg.wait_for_timeout(80)
         pg.wait_for_timeout(400)
         check(f'[{tag}] limite máximo de zoom', abs(cam()['z'] - ev("CF.E.maxZoom")) < .001 and ev("document.getElementById('zIn').disabled"))
         # 4) canteiro continua tocável no zoom máximo e no mínimo
@@ -255,7 +255,7 @@ def run_extras():
         ctx = b.new_context(viewport={'width': 390, 'height': 844}, reduced_motion='reduce', has_touch=True, is_mobile=True)
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(URL); pg.wait_for_function('window.CF && window.CF.st'); pg.evaluate('CF.tut&&CF.tut.pular()'); pg.wait_for_timeout(500)
-        pg.click('#zAll', force=True); pg.wait_for_timeout(120)
+        pg.evaluate("document.getElementById('zAll').click()"); pg.wait_for_timeout(120)
         check('[movimento reduzido] visão geral sem animação (imediata)', abs(pg.evaluate('CF.E.cam.zoom') - pg.evaluate('CF.E.minZoom')) < .001)
         prevent = pg.evaluate("(()=>{const e=new Event('gesturestart',{cancelable:true});document.dispatchEvent(e);return e.defaultPrevented})()")
         check('[iPhone] gesto de zoom da página é bloqueado (só o mapa amplia)', prevent)

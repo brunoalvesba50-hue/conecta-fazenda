@@ -176,6 +176,9 @@ export class Engine {
     /* Safari do iPhone: impede o zoom da página inteira (gesto nativo), deixando só o zoom do mapa */
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
     document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    /* se o navegador ainda assim ampliar a página (iOS), volta ao tamanho normal */
+    const vv = window.visualViewport, meta = document.querySelector('meta[name=viewport]');
+    if (vv && meta) vv.addEventListener('resize', () => { if (vv.scale > 1.01) { const c = meta.content; meta.content = c + ',minimum-scale=1'; setTimeout(() => meta.content = c, 60); } });
     let ultimo = 0; document.addEventListener('touchend', e => { const n = Date.now(); if (n - ultimo < 320 && e.target === cv) e.preventDefault(); ultimo = n; }, { passive: false });
     /* computador: mãozinha em cima do que dá para tocar */
     cv.addEventListener('pointermove', e => {

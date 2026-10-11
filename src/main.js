@@ -278,8 +278,8 @@ function visaoInicial() {
   const retrato = E.vh > E.vw * 1.1;
   if (retrato) {
     /* mostra de x≈350 (casa) a x≈1460 (celeiro) e do céu até o pasto */
-    const z = Math.min(E.maxZoom, Math.max(E.minZoom, E.vw / 1000));
-    return { x: 912, y: 20 + E.vh / z / 2, z };
+    const z = Math.min(E.maxZoom, Math.max(E.minZoom, E.vw / 1080));
+    return { x: 900, y: 20 + E.vh / z / 2, z };
   }
   if (E.vh <= 520) {
     /* celular de lado: casa, celeiro, canteiros e animais na tela de uma vez */
@@ -305,6 +305,8 @@ let girado = false;
 function ajustaTela() {
   const W = window.innerWidth, H = window.innerHeight, b = document.body, r = document.documentElement.style;
   b.classList.toggle('compacto', H <= 520); b.classList.toggle('estreito', W <= 480);
+  /* celular/tablet: o zoom é pela pinça no mapa, então os botões + e − saem e fica só o de centralizar */
+  b.classList.toggle('toque', !!(window.matchMedia && matchMedia('(pointer:coarse)').matches));
   r.setProperty('--W', W + 'px'); r.setProperty('--H', H + 'px');
   const o = H > W, mudou = ajustaTela.o !== undefined && ajustaTela.o !== o; ajustaTela.o = o;
   if (E) { E.resize(); if (!mexeu || mudou) { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); } }
