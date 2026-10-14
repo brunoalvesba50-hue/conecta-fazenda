@@ -63,7 +63,6 @@ html,body{height:100%;overflow:hidden;background:#1c3a16;font-family:system-ui,-
 /* toast */
 #toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#222e;color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;z-index:60;pointer-events:none;max-width:88vw;text-align:center}
 #toast.show{opacity:1}
-</style>
 /* ---------- missão chip ---------- */
 #mChip{position:absolute;top:calc(64px + env(safe-area-inset-top));left:10px;max-width:210px;background:var(--creme);border:2px solid #d9c9a3;border-radius:14px;box-shadow:var(--sombra);padding:7px 10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}
 #mChip b{font-size:11px;color:var(--verde-esc)}
@@ -324,7 +323,7 @@ scene.fog=new THREE.Fog(0xbfe3ff,60,150);
 const camera=new THREE.PerspectiveCamera(45,1,0.1,400);
 
 /* câmera orbital */
-const cam={th:0.6,ph:0.95,d:26,tx:0,tz:6,minD:10,maxD:48,minPh:0.35,maxPh:1.35};
+const cam={th:0.6,ph:0.95,d:23,tx:0,tz:6,minD:10,maxD:48,minPh:0.35,maxPh:1.35};
 function updCam(){
  cam.ph=Math.max(cam.minPh,Math.min(cam.maxPh,cam.ph));
  cam.d=Math.max(cam.minD,Math.min(cam.maxD,cam.d));
@@ -606,7 +605,7 @@ function loop(){
  requestAnimationFrame(loop);
  const dt=Math.min(0.05,clock.getDelta());const t=clock.elapsedTime;
  // ciclo dia/noite (8 min = 1 dia)
- const ciclo=(t/480)%1;const fDia=Math.max(0,Math.sin(ciclo*Math.PI*2-Math.PI/2)*0.5+0.5);
+ const ciclo=(t/480+0.35)%1;const fDia=Math.max(0,Math.sin(ciclo*Math.PI*2-Math.PI/2)*0.5+0.5);
  pintaCeu(fDia);
  const sa=ciclo*Math.PI*2-Math.PI/2;
  sun.position.set(Math.cos(sa)*80,Math.max(4,Math.sin(sa)*90),-40);
@@ -804,10 +803,10 @@ function entrega(i){const e=S.entregas[i];if(!e||!temItens(e.it))return;
 function missaoAtual(){return S.misIdx<MISSOES.length?MISSOES[S.misIdx]:null;}
 function progMissao(m){return m.tipo==='nivel'?Math.min(m.q,S.nivel):Math.min(m.q,cont(m.tipo,m.alvo));}
 function checaMissoes(){const m=missaoAtual();if(!m)return;
- if(progMissao(m)>=m.q){S.moedas+=m.premio;S.misIdx++;toast('📋 Missão concluída! +'+m.premio+' 🪙');snd('nivel');if(m.xp)ganhaXp(m.xp);salva();}}
+ if(progMissao(m)>=m.q){S.moedas+=m.prem;S.misIdx++;toast('📋 Missão concluída! +'+m.prem+' 🪙');snd('nivel');if(m.xp)ganhaXp(m.xp);salva();}}
 function painelMissoes(){let h='';
  MISSOES.forEach((m,i)=>{const st=i<S.misIdx?'✅':(i===S.misIdx?'▶️':'🔒');
-  h+='<div class="row"><span class="em">'+st+'</span><div class="grow"><div class="nm">'+m.t+'</div><div class="sub">'+progMissao(m)+'/'+m.q+' · prêmio '+m.premio+' 🪙</div></div></div>';});
+  h+='<div class="row"><span class="em">'+st+'</span><div class="grow"><div class="nm">'+m.t+'</div><div class="sub">'+progMissao(m)+'/'+m.q+' · prêmio '+m.prem+' 🪙</div></div></div>';});
  openModal('📋 Missões',h);}
 function painelMapa(){
  const sbOk=OBJ_SB.every(o=>o.f());let h='';
@@ -864,7 +863,7 @@ $('mChip').onclick=()=>painelMissoes();
 $('bGanhar').onclick=()=>openModal('🪙 Como ganhar moedas','<p style="font-size:13px;line-height:1.9;color:#4a3517">Tudo se ganha <b>jogando</b> — sem dinheiro real!<br>🌱 Plante e colha<br>🧺 Venda no Celeiro<br>🚚 Entregas pagam <b>+60%</b><br>🐄 Leite e ovos dos animais<br>🧀 Queijo e cestas na Padaria<br>📋 Complete missões e suba de nível</p>');
 $('zIn').onclick=()=>{cam.d*=0.8;};
 $('zOut').onclick=()=>{cam.d*=1.25;};
-$('zHome').onclick=()=>{cam.tx=0;cam.tz=6;cam.d=26;cam.th=0.6;};
+$('zHome').onclick=()=>{cam.tx=0;cam.tz=6;cam.d=23;cam.th=0.6;};
 $('hint').onclick=()=>{if(plantaSel){plantaSel=null;hintAtt();}};
 
 /* ================= BOOT ================= */
@@ -878,6 +877,5 @@ setTimeout(()=>{const n=prontoCrops();
 hintAtt();hud();setInterval(hud,600);
 loop();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
