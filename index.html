@@ -239,6 +239,9 @@ body.estreito:not(.toque) .rgZoom{bottom:calc(var(--sab) + 72px)}
 html,body,#tela{height:var(--game-vh)}
 #tela{height:var(--game-vh);width:100vw}
 #game{height:var(--game-vh);width:100vw;image-rendering:auto}
+/* Use the available dynamic viewport in mobile browsers; standalone mode can cover the screen. */
+html,body,#tela,#game{min-height:0;max-height:100dvh}
+@supports not (height:100dvh){html,body,#tela,#game{max-height:100vh}}
 #playerControls{position:fixed;inset:0;z-index:8;pointer-events:none;contain:layout style}
 #movePad{position:absolute;left:calc(var(--sal) + 10px);bottom:calc(var(--sab) + 72px);width:clamp(64px,10vw,88px);height:clamp(64px,10vw,88px);border-radius:50%;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;background:radial-gradient(circle at 35% 27%,rgba(235,251,255,.25),rgba(16,42,55,.7) 70%);border:2px solid rgba(255,255,255,.62);box-shadow:0 5px 18px rgba(0,0,0,.42),inset 0 0 0 3px rgba(5,26,38,.5);display:grid;place-items:center;cursor:grab;overflow:visible}
 #moveRing{position:absolute;inset:13%;border:1px solid rgba(255,255,255,.23);border-radius:50%;pointer-events:none}
@@ -294,7 +297,7 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="screen-orientation" content="landscape">
+<meta name="screen-orientation" content="portrait">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
 <body>
@@ -629,7 +632,7 @@ class Engine {
     if (window.CF_3D_READY) {
       /* O WebGL desenha o cenário e os sprites de imagem. Esta camada mantém os desenhos
          dinâmicos originais do jogo (canteiros, lotes, balões, tutorial e efeitos). */
-      const overlay = this.sprites.filter(s => s.visible && typeof s.draw === 'function')
+      const overlay = this.sprites.filter(s => s.visible && typeof s.draw === 'function' && s.tag !== '3dGround')
         .sort((a, b) => a.layer - b.layer || a.depth - b.depth);
       for (const s of overlay) { c.save(); c.globalAlpha = s.alpha; s.draw(c, s, this); c.restore(); }
       if (this.after) { c.setTransform(d, 0, 0, d, 0, 0); this.after(c); }
@@ -1274,7 +1277,7 @@ function buildScene(E, IMG, api) {
   S.ground = ground; S.groundTop = GROUND_TOP;
   let grama = null; /* grama sem estradas, só para preencher fora do mapa na visão geral */
   const gramaFora = () => grama || (grama = grassCanvas(WORLD.w, WORLD.h - GROUND_TOP, false));
-  add({ layer: 0, z: -1, draw: c => {
+  add({ layer: 0, z: -1, tag: '3dGround', draw: c => {
     c.drawImage(ground, 0, GROUND_TOP);
     const vx = E.cam.x, vw = E.vw / E.cam.zoom;
     if (vx < 0 || vx + vw > WORLD.w) { const g = gramaFora(); c.save(); c.scale(-1, 1); c.drawImage(g, 0, GROUND_TOP); c.drawImage(g, -2 * WORLD.w, GROUND_TOP); c.restore(); }
@@ -2071,7 +2074,7 @@ function ajustaTela() {
   /* O jogo principal é horizontal em celulares; navegadores sem bloqueio de orientação mostram um aviso claro. */
   const toque = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
   b.classList.toggle('toque', toque);
-  b.classList.toggle('landscape-required', toque && H > W);
+  b.classList.remove('landscape-required');
   r.setProperty('--W', W + 'px'); r.setProperty('--H', H + 'px');
   const o = H > W, mudou = ajustaTela.o !== undefined && ajustaTela.o !== o; ajustaTela.o = o;
   if (E) { E.resize(); if (!mexeu || mudou) { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); } }
@@ -2273,9 +2276,6 @@ function configurarControlesDoJogador() {
   const baseFrame = E.onFrame;
   E.onFrame = function (t, dt) {
     if (baseFrame) baseFrame(t, dt);
-    if (document.body.classList.contains('landscape-required')) {
-      target = null; vector.x = vector.y = 0; keys.x = keys.y = 0; lastActive = -10; poseIdle(); return;
-    }
     // Pinça/arrasto no canvas cancela o seguimento automático para permitir explorar livremente.
     if (E._ptr && E._ptr.size && [...E._ptr.values()].some(p => p.moved)) { target = null; lastActive = -10; }
     let vx = vector.x + keys.x, vy = vector.y + keys.y;
@@ -2340,7 +2340,7 @@ function configurarControlesDoJogador() {
       if (!document.fullscreenElement && root.requestFullscreen) await root.requestFullscreen({ navigationUI: 'hide' });
     } catch (_) {}
     try {
-      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('portrait');
     } catch (_) {}
     if (note && document.body.classList.contains('landscape-required')) note.textContent = 'Agora gire o aparelho de lado. Alguns navegadores não permitem girar automaticamente.';
     setTimeout(() => { try { ajustaTela(); } catch (_) {} }, 120);
@@ -2417,8 +2417,14 @@ function configurarControlesDoJogador() {
     btn.setAttribute('aria-pressed','false');btn.setAttribute('aria-label','Ativar música ambiente');btn.innerHTML='♫ <span>Música</span>';
   }
   btn.addEventListener('click',()=>{ if(ligada) desligar(); else ligar(); });
-  // A primeira ação no jogo habilita a trilha sem interromper a ação que o jogador fez.
-  const ativarNaPrimeiraInteracao=(ev)=>{ if(ev && ev.target && ev.target.closest && ev.target.closest('#musicToggle')) return; if(!iniciado) ligar(); document.removeEventListener('pointerdown',ativarNaPrimeiraInteracao,true); document.removeEventListener('touchstart',ativarNaPrimeiraInteracao,true); };
+  // A primeira ação do jogador tenta ocultar os controles do navegador quando a API permite,
+  // sem bloquear a ação original. No iPhone, alguns modos do Safari exigem abrir pela Tela de Início.
+  function solicitarTelaCheia(){
+    const raiz=document.documentElement;
+    if(document.fullscreenElement || typeof raiz.requestFullscreen!=='function') return;
+    try { const pedido=raiz.requestFullscreen({navigationUI:'hide'}); if(pedido&&typeof pedido.catch==='function') pedido.catch(()=>{}); } catch(_) {}
+  }
+  const ativarNaPrimeiraInteracao=(ev)=>{ if(ev && ev.target && ev.target.closest && ev.target.closest('#musicToggle')) return; solicitarTelaCheia(); if(!iniciado) ligar(); document.removeEventListener('pointerdown',ativarNaPrimeiraInteracao,true); document.removeEventListener('touchstart',ativarNaPrimeiraInteracao,true); };
   document.addEventListener('pointerdown',ativarNaPrimeiraInteracao,true);
   document.addEventListener('touchstart',ativarNaPrimeiraInteracao,{capture:true,passive:true});
   document.addEventListener('visibilitychange',()=>{ if(document.hidden&&ligada){ if(ctx&&master)master.gain.setTargetAtTime(.0001,ctx.currentTime,.15); } else if(!document.hidden&&ligada&&ctx&&master){ctx.resume().catch(()=>{});master.gain.setTargetAtTime(.52,ctx.currentTime,.8);} });
@@ -2473,14 +2479,14 @@ try {
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
   renderer.domElement.className = 'cf3dCanvas';
   renderer.domElement.setAttribute('aria-hidden', 'true');
-  renderer.setClearColor(0x78b8e6, 1);
+  renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.sortObjects = true;
   E.cv.parentNode.insertBefore(renderer.domElement, E.cv);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x78b8e6);
+  scene.background = null;
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 3000);
   camera.up.set(0, 1, 0);
 
