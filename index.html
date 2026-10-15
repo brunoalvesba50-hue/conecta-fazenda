@@ -1851,7 +1851,9 @@ function abrir(titulo, render, nome) {
   painel = { nome, last: '', render() { const h = render(); if (h === this.last) return; this.last = h; const b = $('shBody'), y = b.scrollTop; b.innerHTML = h; b.scrollTop = y; } };
   $('shTitle').textContent = titulo; $('sheet').classList.remove('hidden'); $('sheetBg').classList.remove('hidden'); painel.render();
 }
-function fechar() { painel = null; $('sheet').classList.add('hidden'); $('sheetBg').classList.add('hidden'); }
+function fechar() { painel = null; $('sheet').classList.add('hidden'); $('sheetBg').classList.add('hidden'); avisa3d('cf:fechou'); }
+/* avisa a camada 3D (caminhão de entregas) sem depender dela: se o 3D não carregar, nada muda */
+function avisa3d(nome, detail) { try { window.dispatchEvent(new CustomEvent(nome, { detail })); } catch (_) {} }
 $('shClose').onclick = fechar; $('sheetBg').onclick = fechar;
 setInterval(() => { if (painel && painel.vivo !== false) painel.render(); if (st) contadores(); }, 1000);
 /* cliques dentro do painel: data-act="acao:arg1:arg2" */
@@ -1973,7 +1975,7 @@ $('pbOk').onclick = sairPlantio;
 const ACOES = {
   comprar: (k, q) => resultado(G.comprarSemente(st, k, +q), r => toast(r.msg)),
   escolher: k => { if (alvoCanteiro != null && G.estadoCanteiro(st, alvoCanteiro).tipo === 'vazio') plantarEm(alvoCanteiro, k); alvoCanteiro = null; modoPlantio(k); },
-  vender: (k, q) => resultado(G.vender(st, k, +q), r => toast(r.msg)),
+  vender: (k, q) => resultado(G.vender(st, k, +q), r => { toast(r.msg); avisa3d('cf:venda', { item: k, qtd: +q || 1 }); }),
   melhorar: () => resultado(G.melhorarCeleiro(st), r => toast(r.msg)),
   liberar: i => resultado(G.liberarCanteiro(st, +i), r => { toast(r.msg); const p = plotPos(+i); S.sparkle(p.x, p.y); }),
   padaria: () => resultado(G.construirPadaria(st), r => { toast(r.msg); S.sparkle(S.padaria.x, S.padaria.y - 100); }),
@@ -1982,7 +1984,7 @@ const ACOES = {
   alimentar: k => animal(+k),
   alimentarTodos: () => { let n = 0, falta = false; st.animais.forEach((a, k) => { if (G.estadoAnimal(st, k).tipo === 'fome') { const r = G.alimentar(st, k); if (r.ok) n++; else falta = true; } }); if (n) { mudou(); toast(`${n} anima${n > 1 ? 'is' : 'l'} alimentado${n > 1 ? 's' : ''}`); } else toast(falta ? 'Falta milho no celeiro.' : 'Ninguém está com fome agora.', !n); },
   coletarTodos: () => { let n = 0, sub = []; st.animais.forEach((a, k) => { if (G.estadoAnimal(st, k).tipo === 'pronto') { const r = G.coletar(st, k); if (r.ok) { n++; sub = sub.concat(r.subiu || []); } } }); if (n) { mudou(); toast(`Coletou ${n} produto${n > 1 ? 's' : ''}`); niveis(sub); } else toast('Nada pronto para coletar.', true); },
-  entregar: i => resultado(G.entregar(st, +i), r => { toast(r.msg); S.floatText(S.casa.x, S.casa.y - 200, `+${r.moedas}`, null); }),
+  entregar: i => { const ped = st.entregas && st.entregas[+i]; return resultado(G.entregar(st, +i), r => { toast(r.msg); if (ped && ped.pede) for (const [k, q] of Object.entries(ped.pede)) avisa3d('cf:venda', { item: k, qtd: q }); S.floatText(S.casa.x, S.casa.y - 200, `+${r.moedas}`, null); }); },
   trocar: i => resultado(G.trocarEntrega(st, +i)),
   resgatar: () => resultado(G.resgatarMissao(st), r => toast(r.msg)),
   aba: a => painelMissoes(a),
@@ -2554,7 +2556,7 @@ try {
     // alterar outras árvores/objetos que usam a mesma imagem original.
     return new THREE.MeshBasicMaterial({
       map: textureFor(image), transparent: true, alphaTest: 0.025,
-      depthWrite: false, side: THREE.DoubleSide, toneMapped: false
+      depthWrite: false, depthTest: false, side: THREE.DoubleSide, toneMapped: false
     });
   }
   function makeMesh(sprite) {
@@ -2658,6 +2660,396 @@ try {
   // Fallback seguro: se WebGL não estiver disponível, o jogo original continua rodando em 2D.
   console.error('Conecta Fazenda: não foi possível iniciar o renderizador 3D. A versão original foi mantida.', err);
   window.CF_3D_READY = false;
+}
+</script>
+<script type="module" id="cf3dModelos">
+import * as THREE from 'three';
+
+/*
+ * Conecta Fazenda — piloto de modelos 3D de verdade (geometria, luz e sombra), conforme o guia 3D:
+ * um veículo (caminhão de entregas), uma construção (casa de funcionário) e um animal (porcos no chiqueiro).
+ * Nada do jogo original é trocado: os modelos entram na mesma cena WebGL das ilustrações.
+ *
+ * Coordenadas: cada modelo é feito em unidades do mapa (1 unidade = 1 px do mundo do jogo), com
+ *   X = largura (leste), Y = altura, Z = profundidade (para o sul, perto de quem joga), solo em Y = 0.
+ * O modelo é inclinado em ELEV graus para casar com a câmera das ilustrações: os canteiros (losango
+ * 160 × 92) mostram que o chão aparece achatado por sen(35°) ≈ 0,57.
+ * A posição no mapa (mx, my) é o ponto do chão embaixo do centro do modelo.
+ */
+const esperar = () => new Promise((ok, falha) => {
+  const t0 = performance.now();
+  const ve = () => {
+    if (window.CF_3D_SCENE && window.CF_3D_RENDERER && window.CF && window.CF.E) ok();
+    else if (window.CF_3D_READY === false || performance.now() - t0 > 60000) falha(new Error('cena 3D indisponível'));
+    else requestAnimationFrame(ve);
+  };
+  ve();
+});
+
+try {
+  await esperar();
+  const scene = window.CF_3D_SCENE, renderer = window.CF_3D_RENDERER, CF = window.CF, E = CF.E;
+  const ELEV = THREE.MathUtils.degToRad(35), SEN = Math.sin(ELEV), COS = Math.cos(ELEV);
+  const Z_MODELOS = 300;  // plano de profundidade dos modelos (a câmera vê de z = 1000 até -2000)
+
+  /* ---------- luz e sombra ---------- */
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  /* direção "para cima" e "para o sul" de um modelo já inclinado, no espaço da cena */
+  const local = (x, y, z) => new THREE.Vector3(x, y * COS - z * SEN, y * SEN + z * COS);
+  const sol = new THREE.DirectionalLight(0xffe0b0, 2.6);  // fim de tarde, vindo do alto à esquerda
+  const centro = new THREE.Vector3(900, -1300, Z_MODELOS);
+  sol.position.copy(centro).add(local(-0.75, 1, 0.45).normalize().multiplyScalar(1600));
+  sol.target.position.copy(centro);
+  sol.castShadow = true;
+  sol.shadow.mapSize.set(2048, 2048);
+  Object.assign(sol.shadow.camera, { left: -1500, right: 1500, top: 1500, bottom: -1500, near: 10, far: 3600 });
+  sol.shadow.bias = -0.0006; sol.shadow.normalBias = 0.6; sol.shadow.radius = 3;
+  /* luz só dos modelos 3D (as ilustrações usam material sem luz, então não mudam) */
+  const ceu = new THREE.HemisphereLight(0xdff0ff, 0x6f7f3a, 1.25);
+  ceu.position.copy(local(0, 1, 0));
+  const preenche = new THREE.DirectionalLight(0xfff4e0, 0.9);
+  preenche.position.copy(centro).add(local(0.2, 0.35, 1).normalize().multiplyScalar(1600)); preenche.target.position.copy(centro);
+  scene.add(sol, sol.target, ceu, preenche, preenche.target);
+
+  /* ---------- materiais e peças ---------- */
+  const mats = new Map();
+  const M = (cor, o = {}) => {
+    const k = cor + JSON.stringify(o);
+    if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({
+      color: cor, roughness: o.r ?? 0.78, metalness: o.m ?? 0, emissive: o.e ?? 0x000000, emissiveIntensity: o.ei ?? 1,
+      transparent: true, opacity: 1, side: o.dupla ? THREE.DoubleSide : THREE.FrontSide,
+    }));
+    return mats.get(k);
+  };
+  const malha = (geo, mat, pai, x = 0, y = 0, z = 0) => {
+    const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; pai.add(m); return m;
+  };
+  /* caixa com cantos arredondados (visual de brinquedo, sem quinas duras) */
+  const geoCache = new Map();
+  function caixaR(w, h, d, r = 3) {
+    const k = [w, h, d, r].join(':'); if (geoCache.has(k)) return geoCache.get(k);
+    r = Math.min(r, w / 2 - .01, h / 2 - .01, d / 2 - .01);
+    const s = new THREE.Shape(), x = -w / 2 + r, y = -h / 2 + r, W = w - 2 * r, H = h - 2 * r;
+    s.moveTo(x, y); s.lineTo(x + W, y); s.lineTo(x + W, y + H); s.lineTo(x, y + H); s.lineTo(x, y);
+    const g = new THREE.ExtrudeGeometry(s, { depth: d - 2 * r, bevelEnabled: true, bevelSize: r, bevelThickness: r, bevelSegments: 3, curveSegments: 3 });
+    g.translate(0, 0, -(d - 2 * r) / 2); g.computeVertexNormals(); geoCache.set(k, g); return g;
+  }
+  const caixa = (w, h, d, mat, pai, x, y, z, r = 2) => malha(caixaR(w, h, d, r), mat, pai, x, y, z);
+  const cilindro = (rt, rb, h, mat, pai, x, y, z, seg = 14) => malha(new THREE.CylinderGeometry(rt, rb, h, seg), mat, pai, x, y, z);
+  const esfera = (r, mat, pai, x, y, z, seg = 18) => malha(new THREE.SphereGeometry(r, seg, Math.round(seg * .75)), mat, pai, x, y, z);
+
+  /* sombra de contato macia (deixa o modelo "pousado" no chão) */
+  const texContato = (() => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d');
+    const g = c.createRadialGradient(64, 64, 4, 64, 64, 64); g.addColorStop(0, 'rgba(25,30,10,.55)'); g.addColorStop(1, 'rgba(25,30,10,0)');
+    c.fillStyle = g; c.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  function chao(pai, w, d) {
+    const contato = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ map: texContato, transparent: true, depthWrite: false, toneMapped: false }));
+    contato.rotation.x = -Math.PI / 2; contato.position.y = 0.3; pai.add(contato);
+    const sombra = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.4, d * 2.4), new THREE.ShadowMaterial({ opacity: 0.24, transparent: true, depthWrite: false }));
+    sombra.rotation.x = -Math.PI / 2; sombra.position.y = 0.5; sombra.receiveShadow = true; pai.add(sombra);
+    return [contato, sombra];
+  }
+
+  /*
+   * Ordem de desenho: as ilustrações são desenhadas de trás para a frente (pela linha do chão).
+   * Cada modelo entra nessa mesma fila, na linha do chão dele; o buffer de profundidade é limpo
+   * no começo de cada modelo, então ele só se compara consigo mesmo (paredes, rodas, telhado).
+   */
+  const modelos = [];
+  const limpaProf = () => { renderer.state.buffers.depth.setMask(true); renderer.clearDepth(); };
+  function modelo(nome, mx, my, montar) {
+    const raiz = new THREE.Group(), inclina = new THREE.Group(), corpo = new THREE.Group();
+    raiz.name = '3d:' + nome; inclina.rotation.x = ELEV; raiz.add(inclina);
+    /* a base (sombras no chão) vem primeiro: é desenhada antes do corpo */
+    const base = new THREE.Group(); inclina.add(base); inclina.add(corpo);
+    const o = { nome, raiz, corpo, base, mx, my, malhas: [] };
+    montar(o);
+    scene.add(raiz);
+    raiz.updateMatrixWorld(true);
+    raiz.traverse(m => { if (m.isMesh) o.malhas.push(m); });
+    /* a primeira malha desenhada limpa a profundidade (nunca é descartada; as outras só são desenhadas se estiverem na tela) */
+    o.malhas[0].onBeforeRender = limpaProf; o.malhas[0].frustumCulled = false;
+    modelos.push(o); posiciona(o); return o;
+  }
+  function posiciona(o) {
+    o.raiz.position.set(o.mx, -o.my, Z_MODELOS);
+    const base = 100000 + o.my + 5000;  // mesma régua das ilustrações (camada 1)
+    o.malhas.forEach((m, i) => { m.renderOrder = base + i * 1e-5; });
+  }
+  /* vira o modelo para andar na direção (dx, dy) do mapa (o chão é achatado, então dy vale mais em Z) */
+  const rumo = (dx, dy) => -Math.atan2(dy / SEN, dx);
+
+  /* ================= CAMINHÃO ================= */
+  const CORES_PRODUTO = { milho: 0xf2c230, alface: 0x7cc243, tomate: 0xe2412d, cenoura: 0xf08a24, morango: 0xd92b45, feijao: 0x6b3a1f, leite: 0xf4f4ef, ovo: 0xf3e6cc, queijo: 0xf7cf4a, cesta: 0xc98d4a };
+  const CAPACIDADE = 6;
+  const caminhao = modelo('caminhao', 0, 0, o => {
+    const c = o.corpo;
+    const branco = M(0xf3efe6, { r: .45 }), cinza = M(0x585c62, { r: .6, m: .2 }), escuro = M(0x2a2c30, { r: .7 }), vidro = M(0x24435f, { r: .15, m: .3 });
+    const madeira = M(0xb47a3e, { r: .85 }), madeiraEsc = M(0x7a4d22, { r: .9 }), farol = M(0xfff1b8, { e: 0xffe08a, ei: .9 }), lanterna = M(0xe23b2b, { e: 0x8a1408, ei: .6 });
+    chao(o.base, 230, 120);
+    /* rodas (giram conforme anda) */
+    o.rodas = [];
+    for (const [x, z] of [[62, 41], [62, -41], [-38, 41], [-38, -41], [-66, 41], [-66, -41]]) {
+      const r = new THREE.Group(); r.position.set(x, 17, z); c.add(r);
+      const pneu = malha(new THREE.CylinderGeometry(17, 17, 13, 22), escuro, r); pneu.rotation.x = Math.PI / 2;
+      const aro = malha(new THREE.CylinderGeometry(9, 9, 14, 16), M(0xc9ccd1, { r: .3, m: .6 }), r); aro.rotation.x = Math.PI / 2;
+      const cubo = malha(new THREE.CylinderGeometry(3.5, 3.5, 15, 8), cinza, r); cubo.rotation.x = Math.PI / 2;
+      o.rodas.push(r);
+    }
+    /* chassi e para-lamas */
+    caixa(176, 10, 70, escuro, c, -4, 22, 0, 2);
+    for (const z of [43, -43]) { caixa(34, 6, 16, cinza, c, 62, 36, z, 3); caixa(70, 6, 16, cinza, c, -52, 36, z, 3); }
+    /* cabine */
+    caixa(56, 66, 86, branco, c, 64, 62, 0, 9);
+    caixa(8, 26, 70, vidro, c, 92, 76, 0, 3);                       // para-brisa
+    for (const z of [43.5, -43.5]) caixa(30, 22, 2, vidro, c, 66, 78, z, 1); // janelas laterais
+    caixa(6, 20, 64, escuro, c, 93, 44, 0, 2);                       // grade
+    for (const y of [40, 46, 52]) caixa(2, 2, 56, cinza, c, 96.5, y, 0, .8);
+    for (const z of [30, -30]) caixa(4, 8, 12, farol, c, 94, 44, z, 2);
+    caixa(10, 8, 90, cinza, c, 92, 28, 0, 3);                        // para-choque
+    caixa(48, 6, 80, M(0x2f6fb1, { r: .5 }), c, 64, 97, 0, 3);       // teto azul da fazenda
+    for (const z of [47, -47]) caixa(4, 12, 4, escuro, c, 82, 80, z, 1.5); // retrovisores
+    /* carroceria de madeira (grade de ripas) */
+    caixa(128, 8, 88, madeiraEsc, c, -32, 31, 0, 2);
+    for (const z of [42, -42]) {
+      for (const y of [46, 60, 74]) caixa(128, 6, 4, madeira, c, -32, y, z, 1.5);
+      for (const x of [-94, -63, -32, -1, 30]) caixa(6, 46, 6, madeiraEsc, c, x, 56, z, 1.5);
+    }
+    for (const y of [46, 60, 74]) caixa(4, 6, 86, madeira, c, -96, y, 0, 1.5);
+    for (const y of [46, 60, 74]) caixa(4, 6, 86, madeira, c, 32, y, 0, 1.5);
+    for (const z of [26, -26]) caixa(4, 12, 6, lanterna, c, -97, 30, z, 1.5);
+    /* caixas de produtos: 2 fileiras × 3, aparecem quando a pessoa vende */
+    o.caixas = [];
+    for (let i = 0; i < CAPACIDADE; i++) {
+      const g = new THREE.Group(), col = i % 3, lin = Math.floor(i / 3);
+      g.position.set(-74 + col * 40, 35, lin ? -20 : 20); c.add(g);
+      caixa(34, 24, 34, M(0xd9a55c, { r: .85 }), g, 0, 12, 0, 2);
+      for (const y of [6, 18]) for (const z of [17.2, -17.2]) caixa(34, 3, 1.2, madeiraEsc, g, 0, y, z, .5);
+      const topo = new THREE.Group(); topo.position.y = 24; g.add(topo);
+      g.userData.topo = topo; g.visible = false; g.scale.setScalar(.001); o.caixas.push(g);
+    }
+  });
+
+  /* rota pela estrada da fazenda até a saída para a cidade (pontos da rede de estradas do jogo) */
+  const ROTA_BASE = [[1150, 890], [1000, 888], [860, 896], [722, 906], [668, 990], [622, 1066], [604, 1132], [592, 1198], [598, 1262],
+    [612, 1340], [620, 1440], [628, 1540], [664, 1720], [668, 1900], [646, 2060], [626, 2230], [640, 2400], [652, 2620]];
+  function suaviza(pts, passo = 6) {
+    const P = [pts[0], ...pts, pts[pts.length - 1]], out = [];
+    for (let i = 1; i < P.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]], n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / passo));
+      for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(j => .5 * ((2 * p1[j]) + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3))); }
+    }
+    out.push(pts[pts.length - 1]); return out;
+  }
+  const ROTA = suaviza(ROTA_BASE), DIST = [0];
+  for (let i = 1; i < ROTA.length; i++) DIST.push(DIST[i - 1] + Math.hypot(ROTA[i][0] - ROTA[i - 1][0], ROTA[i][1] - ROTA[i - 1][1]));
+  const TOTAL = DIST[DIST.length - 1];
+  function pontoRota(s) {
+    s = Math.max(0, Math.min(TOTAL, s)); let i = 1; while (i < DIST.length - 1 && DIST[i] < s) i++;
+    const a = ROTA[i - 1], b = ROTA[i], t = (s - DIST[i - 1]) / Math.max(1e-6, DIST[i] - DIST[i - 1]);
+    return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, dx: b[0] - a[0], dy: b[1] - a[1] };
+  }
+  const PARADO = pontoRota(0), RUMO_PARADO = rumo(PARADO.dx, PARADO.dy);
+  const T = { estado: 'parado', s: 0, v: 0, rumo: RUMO_PARADO, carga: [], pendentes: [], ultimaCarga: 0, foraAte: 0, giro: 0, saiEm: 0 };
+  const VOLTA_EM = 12, VEL = 150;
+
+  function mostraCarga() {
+    caminhao.caixas.forEach((g, i) => {
+      const item = T.carga[i];
+      if (!item) { g.visible = false; g.scale.setScalar(.001); g.userData.item = null; return; }
+      if (g.userData.item === item) return;
+      g.userData.item = item; g.visible = true; g.userData.pop = 0;
+      const topo = g.userData.topo; topo.clear();
+      const cor = CORES_PRODUTO[item] ?? 0xe6c07a, m = M(cor, { r: .55 });
+      for (let k = 0; k < 7; k++) esfera(6 + (k % 3), m, topo, -9 + (k % 3) * 9 + (k > 3 ? 4 : 0), 2 + (k > 3 ? 5 : 0), -8 + Math.floor(k / 3) * 8, 10);
+      topo.traverse(m => { if (m.isMesh) caminhao.malhas.push(m); });
+    });
+    caminhao.malhas = caminhao.malhas.filter(m => m.parent);
+    posiciona(caminhao);
+  }
+  function carrega(item, qtd) {
+    for (let i = 0; i < Math.max(1, Math.min(qtd, CAPACIDADE)); i++) {
+      if (T.estado !== 'parado') { T.pendentes.push(item); continue; }
+      if (T.carga.length < CAPACIDADE) T.carga.push(item);
+    }
+    T.ultimaCarga = performance.now(); T.saiEm = 0; mostraCarga();
+  }
+  function parte() { if (T.estado === 'parado' && T.carga.length) { T.estado = 'indo'; T.v = 0; } }
+
+  window.addEventListener('cf:venda', ev => carrega(ev.detail.item, ev.detail.qtd || 1));
+  /* fechou o Mercado / as Entregas: o caminhão carregado sai logo depois, à vista de quem joga */
+  window.addEventListener('cf:fechou', () => { if (T.carga.length && T.estado === 'parado') T.saiEm = performance.now() + 700; });
+
+  /* toque no caminhão parado abre o Mercado na aba de vender */
+  const Sprite = E.sprites[0].constructor;
+  E.add(new Sprite({ x: PARADO.x, y: PARADO.y, z: PARADO.y, layer: 1, tag: 'caminhao3d', draw: () => {},
+    hit: (wx, wy) => T.estado === 'parado' && ((wx - PARADO.x) / 115) ** 2 + ((wy - PARADO.y + 40) / 75) ** 2 <= 1,
+    onTap: () => { const b = document.querySelector('[data-a="mercado"]'); if (b) { b.click(); setTimeout(() => { const v = document.querySelector('[data-act="mercado:vender"]'); if (v) v.click(); }, 60); } } }));
+  /* aviso no chão enquanto o caminhão está na estrada */
+  E.add(new Sprite({ x: PARADO.x, y: PARADO.y, z: PARADO.y, layer: 2, tag: 'caminhao3dAviso', draw: c => {
+    if (T.estado === 'parado' || T.estado === 'virando' || (T.estado === 'indo' && T.s < 260) || (T.estado === 'voltando' && T.s < 260)) return;
+    const falta = T.estado === 'fora' ? Math.max(1, Math.ceil((T.foraAte - performance.now()) / 1000)) : null;
+    const tx = T.estado === 'indo' ? 'Entrega a caminho da cidade' : T.estado === 'voltando' ? 'Caminhão voltando' : `Caminhão volta em ${falta}s`;
+    c.save(); c.font = '800 16px system-ui,-apple-system,sans-serif'; const w = c.measureText(tx).width + 26;
+    c.shadowColor = 'rgba(0,0,0,.3)'; c.shadowBlur = 8; c.fillStyle = 'rgba(255,250,236,.95)';
+    const x = PARADO.x - w / 2, y = PARADO.y - 30; c.beginPath(); c.roundRect(x, y, w, 30, 15); c.fill();
+    c.shadowBlur = 0; c.fillStyle = '#4a3512'; c.textAlign = 'center'; c.fillText(tx, PARADO.x, y + 21); c.restore();
+  } }));
+
+  function passoCaminhao(dt) {
+    const agora = performance.now();
+    if (T.estado === 'parado' && T.carga.length && ((T.saiEm && agora >= T.saiEm) || agora - T.ultimaCarga > 30000)) parte();
+    if (T.estado === 'indo') { T.v = Math.min(VEL, T.v + 90 * dt); T.s += T.v * dt; if (T.s >= TOTAL) { T.estado = 'fora'; T.foraAte = agora + VOLTA_EM * 1000; T.carga = []; mostraCarga(); } }
+    else if (T.estado === 'fora') { if (agora >= T.foraAte) { T.estado = 'voltando'; T.v = VEL; } }
+    else if (T.estado === 'voltando') { T.v = Math.max(45, Math.min(VEL, T.s * .9)); T.s -= T.v * dt; if (T.s <= 0) { T.s = 0; T.estado = 'virando'; T.giro = 0; } }
+    else if (T.estado === 'virando') {
+      /* manobra: volta a ficar de frente para a saída */
+      let d = RUMO_PARADO - T.rumo; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+      T.rumo += Math.sign(d) * Math.min(Math.abs(d), 2.2 * dt);
+      if (Math.abs(d) < .01) { T.rumo = RUMO_PARADO; T.estado = 'parado'; T.carga = T.pendentes.splice(0, CAPACIDADE); T.pendentes = []; T.ultimaCarga = agora; mostraCarga(); }
+    }
+    const p = pontoRota(T.s);
+    if (T.estado === 'indo') T.rumo = rumo(p.dx, p.dy);
+    if (T.estado === 'voltando') T.rumo = rumo(-p.dx, -p.dy);
+    caminhao.mx = p.x; caminhao.my = p.y; caminhao.corpo.rotation.y = T.rumo; caminhao.base.rotation.y = T.rumo;
+    caminhao.raiz.visible = T.estado !== 'fora';
+    const giroRoda = (T.estado === 'indo' || T.estado === 'voltando' ? T.v : T.estado === 'virando' ? 30 : 0) * dt / 17;
+    for (const r of caminhao.rodas) r.rotation.z -= giroRoda * (T.estado === 'voltando' ? 1 : 1);
+    /* balanço leve da carroceria andando e "pop" das caixas novas */
+    caminhao.corpo.position.y = (T.estado === 'indo' || T.estado === 'voltando') ? Math.abs(Math.sin(agora / 90)) * 1.2 : 0;
+    for (const g of caminhao.caixas) if (g.visible && g.userData.pop < 1) {
+      g.userData.pop = Math.min(1, g.userData.pop + dt * 3.2); const t = g.userData.pop, c1 = 1.70158, c3 = c1 + 1;
+      g.scale.setScalar(Math.max(.001, 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2)); g.position.y = 35 + (1 - t) * 40;
+    }
+    posiciona(caminhao);
+  }
+
+  /* ================= CASA DE FUNCIONÁRIO ================= */
+  modelo('casaFuncionario', 850, 1835, o => {
+    const c = o.corpo; c.rotation.y = -0.62; o.base.rotation.y = -0.62;
+    const parede = M(0xf3e4c4, { r: .9 }), viga = M(0x6b4423, { r: .85 }), pedra = M(0x9b9488, { r: .95 }), telha = M(0xc4532b, { r: .7 }), telhaEsc = M(0x9e3d1d, { r: .75 });
+    const vidro = M(0xffd27a, { e: 0xffb648, ei: .55, r: .3 }), veneziana = M(0x4f7a3a, { r: .8 }), porta = M(0x8a5428, { r: .8 }), deck = M(0xa8743d, { r: .85 });
+    chao(o.base, 260, 210);
+    caixa(184, 12, 134, pedra, c, 0, 6, 0, 3);                                  // alicerce de pedra
+    caixa(170, 84, 120, parede, c, 0, 54, 0, 2);                                 // paredes
+    for (const [x, z] of [[85, 60], [-85, 60], [85, -60], [-85, -60]]) caixa(7, 86, 7, viga, c, x, 55, z, 1.5); // cantos
+    for (const z of [60.5, -60.5]) caixa(172, 6, 3, viga, c, 0, 96, z, 1);       // vigas de cima
+    caixa(172, 5, 3, viga, c, 0, 44, 60.8, 1);
+    caixa(3, 5, 122, viga, c, 85.8, 44, 0, 1);
+    /* porta, janelas com venezianas e floreiras */
+    caixa(30, 50, 4, viga, c, 0, 37, 61, 1.5); caixa(24, 44, 3, porta, c, 0, 35, 62, 1.5);
+    esfera(2, M(0xe7c15a, { m: .6, r: .3 }), c, 7, 34, 64, 8);
+    for (const x of [-50, 50]) {
+      caixa(34, 30, 3, viga, c, x, 60, 61, 1.5); caixa(28, 24, 2, vidro, c, x, 60, 62.2, 1);
+      caixa(2, 24, 2, viga, c, x, 60, 63, .5); caixa(28, 2, 2, viga, c, x, 60, 63, .5);
+      for (const s of [-1, 1]) caixa(9, 28, 2, veneziana, c, x + s * 22, 60, 62, 1);
+      caixa(32, 7, 8, deck, c, x, 43, 64, 1.5);
+      for (let k = 0; k < 5; k++) esfera(3.2, M([0xe8475a, 0xffd23f, 0xf59bc2, 0xffffff, 0xe8475a][k], { r: .6 }), c, x - 12 + k * 6, 49, 65, 8);
+    }
+    caixa(3, 28, 30, viga, c, 86.5, 60, 0, 1.5); caixa(2, 22, 24, vidro, c, 87.8, 60, 0, 1);
+    /* varanda com corrimão e degraus */
+    caixa(184, 8, 34, deck, c, 0, 4, 78, 2);
+    for (const x of [-88, -30, 30, 88]) caixa(5, 64, 5, viga, c, x, 38, 92, 1.5);
+    for (const x of [-59, 59]) { caixa(54, 4, 3, viga, c, x, 26, 92, 1); for (let k = -2; k <= 2; k++) caixa(2.5, 18, 2.5, viga, c, x + k * 10, 17, 92, .8); }
+    caixa(40, 4, 10, deck, c, 0, 3, 100, 1.5);
+    /* telhado da varanda (uma água) */
+    const tv = caixa(190, 4, 36, telha, c, 0, 74, 80, 1.5); tv.rotation.x = 0.32;
+    /* telhado principal de duas águas, com fileiras de telhas */
+    const beiral = 9, alt = 38, topo = 98, meia = 60 + beiral, inc = Math.atan2(alt, 60), L = Math.hypot(meia, alt * meia / 60);
+    for (const s of [1, -1]) {
+      const agua = new THREE.Group(); agua.position.set(0, topo + alt / 2 - (beiral * alt / 60) / 2, s * (60 + beiral) / 2 - s * beiral / 2); agua.rotation.x = s * inc; c.add(agua);
+      caixa(192, 5, L, telha, agua, 0, 0, 0, 1.5);
+      for (let k = 0; k < 7; k++) { const t = malha(new THREE.CylinderGeometry(2.6, 2.6, 192, 6, 1, false, 0, Math.PI), telhaEsc, agua, 0, 2.5, -L / 2 + 6 + k * (L - 10) / 6); t.rotation.z = Math.PI / 2; }
+    }
+    const cumeeira = malha(new THREE.CylinderGeometry(4, 4, 194, 10), telhaEsc, c, 0, topo + alt + 2, 0); cumeeira.rotation.z = Math.PI / 2;
+    /* oitões (triângulos das laterais) */
+    const tri = new THREE.Shape(); tri.moveTo(-58, 0); tri.lineTo(58, 0); tri.lineTo(0, alt - 4); tri.lineTo(-58, 0);
+    for (const x of [83, -83]) { const g = malha(new THREE.ExtrudeGeometry(tri, { depth: 3, bevelEnabled: false }), parede, c, x - 1.5, topo, 0); g.rotation.y = Math.PI / 2; }
+    /* chaminé */
+    caixa(18, 48, 18, M(0xa4583a, { r: .9 }), c, 48, 136, -22, 2); caixa(22, 5, 22, pedra, c, 48, 161, -22, 1.5);
+    /* lampião da porta */
+    caixa(5, 8, 5, M(0xffe7a3, { e: 0xffc65a, ei: 1.2 }), c, 22, 66, 63, 1.5);
+  });
+
+  /* ================= CHIQUEIRO COM PORCOS ================= */
+  const chiqueiro = modelo('chiqueiro', 1230, 2072, o => {
+    const c = o.corpo, madeira = M(0x9b6534, { r: .9 }), madeiraEsc = M(0x6e4420, { r: .9 }), lama = M(0x6d4a2b, { r: .45, m: .05 }), palha = M(0xe3c26a, { r: .95 });
+    chao(o.base, 300, 220);
+    const W = 130, D = 82;
+    /* piso de terra e poça de lama */
+    const terra = malha(new THREE.CircleGeometry(1, 40), M(0x9a7444, { r: 1 }), c, 0, .6, 0); terra.rotation.x = -Math.PI / 2; terra.scale.set(W * 1.02, D * 1.04, 1);
+    const poca = malha(new THREE.CircleGeometry(1, 32), lama, c, 30, 1.2, 16); poca.rotation.x = -Math.PI / 2; poca.scale.set(42, 24, 1);
+    /* cerca de madeira em volta (mourões + 2 ripas), com porteira na frente */
+    const lado = (x0, z0, x1, z1, porteira) => {
+      const n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / 30));
+      for (let i = 0; i <= n; i++) cilindro(3, 3.4, 30, madeiraEsc, c, x0 + (x1 - x0) * i / n, 15, z0 + (z1 - z0) * i / n, 8);
+      const len = Math.hypot(x1 - x0, z1 - z0), ang = -Math.atan2(z1 - z0, x1 - x0);
+      for (const y of [12, 24]) { const r = caixa(len, 4, 3, porteira ? M(0xb98a52, { r: .85 }) : madeira, c, (x0 + x1) / 2, y, (z0 + z1) / 2, 1); r.rotation.y = ang; }
+    };
+    lado(-W, -D, W, -D); lado(W, -D, W, D); lado(-W, D, -W, -D);
+    lado(-W, D, -24, D); lado(24, D, W, D); lado(-24, D, 24, D, true);
+    /* abrigo com telhado de telha no fundo à esquerda */
+    for (const [x, z] of [[-122, -78], [-40, -78], [-122, -20], [-40, -20]]) caixa(6, 46, 6, madeiraEsc, c, x, 23, z, 1.5);
+    caixa(80, 4, 54, palha, c, -81, 2.5, -49, 2);
+    for (const s of [1, -1]) {
+      const t = caixa(96, 4, 40, M(0xc4532b, { r: .7 }), c, -81, 56, -49 + s * 15, 1.5); t.rotation.x = s * 0.72;
+      for (let k = 0; k < 4; k++) { const r = malha(new THREE.CylinderGeometry(2, 2, 96, 6, 1, false, 0, Math.PI), M(0x9e3d1d, { r: .75 }), t, 0, 2, -15 + k * 10); r.rotation.z = Math.PI / 2; }
+    }
+    { const cum = malha(new THREE.CylinderGeometry(3.4, 3.4, 98, 8), M(0x9e3d1d, { r: .75 }), c, -81, 69, -49); cum.rotation.z = Math.PI / 2; }
+    /* cocho de ração e balde d'água */
+    caixa(56, 12, 16, madeiraEsc, c, 60, 6, -62, 2); caixa(48, 3, 10, M(0xd8b25a, { r: 1 }), c, 60, 12.5, -62, 1);
+    cilindro(8, 7, 16, M(0x8c9aa6, { r: .4, m: .5 }), c, 104, 8, -60, 14);
+    /* porcos */
+    o.porcos = [];
+    const pele = M(0xf2a3ae, { r: .6 }), peleEsc = M(0xe0808f, { r: .6 }), olho = M(0x1c1410, { r: .3 });
+    const porco = (esc, x, z) => {
+      const p = new THREE.Group(); p.position.set(x, 0, z); p.scale.setScalar(esc); c.add(p);
+      const corpo = esfera(1, pele, p, 0, 24, 0, 22); corpo.scale.set(30, 21, 21);
+      const cab = new THREE.Group(); cab.position.set(27, 29, 0); p.add(cab);
+      const cabeca = esfera(1, pele, cab, 0, 0, 0, 20); cabeca.scale.set(14, 13.5, 14);
+      const focinho = cilindro(7, 7.5, 6, peleEsc, cab, 13, -2, 0, 16); focinho.rotation.z = Math.PI / 2;
+      for (const z of [2.6, -2.6]) esfera(1.4, olho, cab, 16.3, -1.5, z, 6);
+      for (const z of [5.5, -5.5]) { esfera(2.2, olho, cab, 9.5, 5, z, 8); esfera(.8, M(0xffffff), cab, 11.2, 5.8, z * 1.05, 6); }
+      for (const z of [8, -8]) { const orelha = malha(new THREE.ConeGeometry(5, 10, 10), peleEsc, cab, 0, 13, z); orelha.rotation.x = z > 0 ? .5 : -.5; orelha.rotation.z = -.35; }
+      const pernas = [];
+      for (const [px, pz] of [[16, 10], [16, -10], [-16, 10], [-16, -10]]) {
+        const pg = new THREE.Group(); pg.position.set(px, 12, pz); p.add(pg); cilindro(4.4, 4, 12, pele, pg, 0, -6, 0, 10); cilindro(4, 4, 3, M(0x8a5a4a), pg, 0, -11.5, 0, 10); pernas.push(pg);
+      }
+      const rabo = malha(new THREE.TorusGeometry(3.4, 1.1, 6, 12, Math.PI * 1.6), peleEsc, p, -31, 30, 0); rabo.rotation.y = Math.PI / 2;
+      o.porcos.push({ g: p, cab, pernas, rabo, x, z, tx: x, tz: z, espera: Math.random() * 3, fase: Math.random() * 6, esc });
+    };
+    porco(.8, 10, 10); porco(.76, 70, 40); porco(.5, -10, 50); porco(.46, 45, 0);
+  });
+  const LIM = { x0: -112, x1: 116, z0: -6, z1: 66 };  // porcos ficam no cercado, fora do abrigo e do cocho
+  function passoPorcos(dt, t) {
+    for (const p of chiqueiro.porcos) {
+      p.espera -= dt; const dx = p.tx - p.x, dz = p.tz - p.z, d = Math.hypot(dx, dz), anda = d > 1.5;
+      if (anda) { const v = 16 * dt; p.x += dx / d * Math.min(v, d); p.z += dz / d * Math.min(v, d); p.g.rotation.y = -Math.atan2(dz, dx); }
+      else if (p.espera <= 0) { p.tx = LIM.x0 + Math.random() * (LIM.x1 - LIM.x0); p.tz = LIM.z0 + Math.random() * (LIM.z1 - LIM.z0); p.espera = 2 + Math.random() * 4; }
+      p.g.position.set(p.x, anda ? Math.abs(Math.sin(t * 9 + p.fase)) * 1.4 : 0, p.z);
+      p.pernas.forEach((pg, i) => { pg.rotation.z = anda ? Math.sin(t * 9 + p.fase + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * .45 : 0; });
+      /* parado: fuça o chão; o rabinho mexe sempre */
+      p.cab.rotation.z = anda ? 0 : -.18 + Math.sin(t * 2.2 + p.fase) * .14;
+      p.rabo.rotation.x = Math.sin(t * 7 + p.fase) * .5;
+    }
+  }
+
+  /* ---------- quadro a quadro ---------- */
+  let ultimo = performance.now();
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)');
+  function quadro(agora) {
+    requestAnimationFrame(quadro);
+    const dt = Math.min(.05, (agora - ultimo) / 1000); ultimo = agora;
+    passoCaminhao(dt);
+    if (!calmo.matches) passoPorcos(dt, agora / 1000);
+  }
+  requestAnimationFrame(quadro);
+  window.CF_3D_MODELOS = { caminhao: T, carrega, parte, modelos };
+} catch (err) {
+  console.warn('Conecta Fazenda: modelos 3D do piloto não carregaram; o jogo segue como antes.', err);
 }
 </script>
 </body>
