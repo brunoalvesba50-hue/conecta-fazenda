@@ -283,11 +283,13 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
 
 
 /* Música ambiente: controle discreto e responsivo */
-.musicToggle{position:absolute;right:clamp(12px,2.2vw,32px);top:clamp(66px,10vh,92px);z-index:25;display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid rgba(255,255,255,.72);border-radius:999px;background:rgba(21,67,38,.82);color:#fff;font:700 12px/1 system-ui,-apple-system,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.25);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;touch-action:manipulation}
-.musicToggle:active{transform:scale(.96)}
-.musicToggle[aria-pressed="true"]{background:rgba(42,126,54,.94);border-color:#c8f4ad}
-.musicToggle .musicNote{font-size:17px;line-height:12px}
-@media (max-height:420px){.musicToggle{top:clamp(54px,9vh,68px);padding:6px 9px;font-size:11px}}
+.musicToggle{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;padding:0;border:2px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 30%,#2f8a47,#154326);color:#fff;font:700 21px/1 system-ui,-apple-system,sans-serif;box-shadow:0 3px 8px rgba(0,0,0,.3);cursor:pointer;touch-action:manipulation}
+/* o texto "Música" fica só para leitores de tela: na tela aparece só a nota, do tamanho dos outros botões redondos */
+.musicToggle span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.musicToggle:active{transform:scale(.93)}
+.musicToggle[aria-pressed="true"]{background:radial-gradient(circle at 35% 30%,#5fcf6a,#1f7a35);border-color:#c8f4ad}
+.musicToggle[aria-pressed="false"]{opacity:.85}
+body.compacto .musicToggle{width:38px;height:38px;font-size:17px}
 
 </style>
 
@@ -312,7 +314,6 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
   </div>
   <!-- alto à direita: moedas (o + mostra como ganhar jogando) -->
   <div class="hRes"><div class="pill" id="hCoins"><span class="coin"></span><b id="hMoedas">0</b><button class="plus" id="bGanhar" aria-label="Como ganhar mais moedas">+</button></div></div>
-  <button id="musicToggle" class="musicToggle" type="button" aria-label="Ativar música ambiente" aria-pressed="false" title="Música ambiente">♫ <span>Música</span></button>
 
   <!-- coluna esquerda: botões pequenos -->
   <div class="side sideL">
@@ -323,6 +324,7 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
   <!-- coluna direita: mapa e zoom -->
   <div class="side sideR">
     <button class="rBtn" id="bMapa" aria-label="Mapa da Mantiqueira"><img src="data:image/webp;base64,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" alt=""></button>
+    <button id="musicToggle" class="musicToggle" type="button" aria-label="Ativar música ambiente" aria-pressed="false" title="Música ambiente">♫ <span>Música</span></button>
     <div class="zoomBox" id="zoomBox">
       <button id="zIn" aria-label="Aproximar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button id="zOut" aria-label="Afastar"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
@@ -1594,14 +1596,18 @@ function criaRegional({ st, G, $, aoTocarCidade }) {
 
   function limites() {
     /* afastar até ver o mapa inteiro; aproximar até 2,6× o tamanho que cobre a tela */
-    const W = cena.clientWidth, H = cena.clientHeight, min = Math.min(W / IMG_W, H / IMG_H), cobre = Math.max(W / IMG_W, H / IMG_H);
-    return { W, H, min, cobre, max: Math.max(cobre, Math.min(1.0, cobre * 1.85)) };
+    const W = cena.clientWidth, H = cena.clientHeight, cobre = Math.max(W / IMG_W, H / IMG_H);
+    /* celular em pé: a ilustração (deitada) ocupa a altura toda e anda para os lados, sem faixas vazias em cima e embaixo */
+    const emPe = W < H, min = emPe ? cobre : Math.min(W / IMG_W, H / IMG_H);
+    /* folga para as cidades da borda não ficarem atrás do título (em cima) e da barra de cidades (embaixo) */
+    const folgaT = emPe ? 64 : 0, folgaB = emPe ? 84 : 0;
+    return { W, H, min, cobre, folgaT, folgaB, max: emPe ? cobre * 1.4 : Math.max(cobre, Math.min(1.0, cobre * 1.85)) };
   }
   function aplica() {
     const L = limites(); T.k = Math.min(L.max, Math.max(L.min, T.k));
     const w = IMG_W * T.k, h = IMG_H * T.k;  // menor que a tela: fica centralizado
     T.x = w <= L.W ? (L.W - w) / 2 : Math.min(0, Math.max(L.W - w, T.x));
-    T.y = h <= L.H ? (L.H - h) / 2 : Math.min(0, Math.max(L.H - h, T.y));
+    T.y = h + L.folgaT + L.folgaB <= L.H ? (L.H - h + L.folgaT - L.folgaB) / 2 : Math.min(L.folgaT, Math.max(L.H - h - L.folgaB, T.y));
     wrap.style.transform = `translate(${T.x}px,${T.y}px) scale(${T.k})`;
     wrap.style.setProperty('--inv', 1 / T.k);
     $('rgIn').disabled = T.k >= L.max - 1e-6; $('rgOut').disabled = T.k <= L.min + 1e-6;
