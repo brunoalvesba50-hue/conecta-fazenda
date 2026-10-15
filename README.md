@@ -33,6 +33,16 @@ testes/teste_jogo.py       testes automáticos (Playwright)
 ```
 Não usa nenhuma biblioteca externa nem servidor: é só publicar os arquivos (GitHub Pages).
 
+## Motor 3D
+A fazenda é desenhada em 3D de verdade (three.js, script `motor3d` no fim do `index.html`): construções, árvores, cercas, plantações por fase, animais, fazendeiro, casas da vila, lagos, caminhão de entregas, trator, moradores andando pelas estradas e chiqueiro, com sol de fim de tarde e sombras.
+- As regras, o salvamento, os toques, o arraste/pinça e o joystick continuam no motor original; o 3D só lê o estado a cada quadro.
+- Câmera ortográfica 35° acima do horizonte: um ponto do chão (x, y do mapa) fica no mesmo lugar da tela que no jogo 2D (cena 3D: X = x, Z = y / sen 35°).
+- Tocar acerta o modelo 3D; canteiros e lotes também aceitam toque no chão.
+- Vender no Mercado ou fazer uma entrega põe caixas no caminhão, que sai pela estrada para a cidade e volta vazio.
+- Qualidade automática: se o aparelho ficar lento, o jogo baixa resolução, simplifica sombras e tira o capim alto.
+- Sem WebGL, o jogo continua com as ilustrações 2D.
+- Os modelos são feitos por código (sem arquivos GLB); o fundo com a Pedra do Baú continua sendo a pintura original, como painel distante.
+
 ## Salvamento
 Nesta fase, o progresso fica salvo **no próprio aparelho** (localStorage). O save é conferido ao abrir: valores estranhos são corrigidos e um save danificado não trava o jogo (uma cópia fica guardada). Não há senha nem dado pessoal.
 
