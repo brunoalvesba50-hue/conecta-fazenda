@@ -283,11 +283,13 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
 
 
 /* Música ambiente: controle discreto e responsivo */
-.musicToggle{position:absolute;right:clamp(12px,2.2vw,32px);top:clamp(66px,10vh,92px);z-index:25;display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid rgba(255,255,255,.72);border-radius:999px;background:rgba(21,67,38,.82);color:#fff;font:700 12px/1 system-ui,-apple-system,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.25);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;touch-action:manipulation}
-.musicToggle:active{transform:scale(.96)}
-.musicToggle[aria-pressed="true"]{background:rgba(42,126,54,.94);border-color:#c8f4ad}
-.musicToggle .musicNote{font-size:17px;line-height:12px}
-@media (max-height:420px){.musicToggle{top:clamp(54px,9vh,68px);padding:6px 9px;font-size:11px}}
+.musicToggle{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;padding:0;border:2px solid rgba(255,255,255,.55);background:radial-gradient(circle at 35% 30%,#2b7cc0,#123552);box-shadow:0 3px 8px rgba(0,0,0,.3);cursor:pointer;touch-action:manipulation}
+.musicToggle svg{width:22px;height:22px;pointer-events:none}
+/* o texto fica só para leitores de tela; na tela aparece o ícone, do tamanho dos outros botões redondos */
+.musicToggle span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.musicToggle:active{transform:scale(.93)}
+.musicToggle[aria-pressed="true"]{background:radial-gradient(circle at 35% 30%,#5fcf6a,#1f7a35);border-color:#c8f4ad}
+body.compacto .musicToggle{width:38px;height:38px}body.compacto .musicToggle svg{width:18px;height:18px}
 
 </style>
 
@@ -312,7 +314,6 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
   </div>
   <!-- alto à direita: moedas (o + mostra como ganhar jogando) -->
   <div class="hRes"><div class="pill" id="hCoins"><span class="coin"></span><b id="hMoedas">0</b><button class="plus" id="bGanhar" aria-label="Como ganhar mais moedas">+</button></div></div>
-  <button id="musicToggle" class="musicToggle" type="button" aria-label="Ativar música ambiente" aria-pressed="false" title="Música ambiente">♫ <span>Música</span></button>
 
   <!-- coluna esquerda: botões pequenos -->
   <div class="side sideL">
@@ -323,6 +324,7 @@ body.landscape-required #game,body.landscape-required #hud,body.landscape-requir
   <!-- coluna direita: mapa e zoom -->
   <div class="side sideR">
     <button class="rBtn" id="bMapa" aria-label="Mapa da Mantiqueira"><img src="data:image/webp;base64,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" alt=""></button>
+    <button id="musicToggle" class="musicToggle" type="button" aria-label="Ligar som da fazenda" aria-pressed="false" title="Som da fazenda"></button>
     <div class="zoomBox" id="zoomBox">
       <button id="zIn" aria-label="Aproximar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button id="zOut" aria-label="Afastar"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
@@ -1726,6 +1728,8 @@ function sanear(raw, now = agora()) {
   })) : [];
   st.casas = {}; for (const c of CASAS) if (obj(raw.casas)[c.id] === true) st.casas[c.id] = true;
   st.cidades = {}; for (const r of REGIOES) { const c = obj(raw.cidades)[r.id]; if (c && c.premio === true) st.cidades[r.id] = { em: int(c.em, 0, now, now), premio: true }; }
+  /* cidade escolhida no mapa: só um nome de cidade que existe */
+  if (REGIOES.some(r => r.id === raw.regiaoSel)) st.regiaoSel = raw.regiaoSel;
   /* tutorial: quem já jogava antes do tutorial existir não é obrigado a ver (pode rever em Ajustes) */
   const tu = raw.tut; st.tut = tu && typeof tu === 'object' ? { passo: int(tu.passo, 0, 50, 0), fim: tu.fim === true, base: int(tu.base, 0, 1e9, 0) } : { passo: 0, fim: true };
   repoeEntregas(st);
@@ -2222,24 +2226,99 @@ function configurarControlesDoJogador() {
   });
   window.addEventListener('blur', () => { keys.x = keys.y = 0; keys.run = false; vector.x = vector.y = 0; target = null; lastActive = -10; });
 
-  // Toque em um canteiro: Zé caminha até ele antes de executar a ação original.
+  /* Toque responde na hora: a ação acontece já, e o fazendeiro vai caminhando até o lugar em seguida,
+     sem segurar o jogo e sem puxar a câmera (a pessoa continua vendo o que tocou). */
+  function vaiAte(pointProvider, range) {
+    if (document.body.classList.contains('landscape-required')) return;
+    if (padPointer != null || keys.x || keys.y) return;   // está no joystick: não muda o rumo
+    target = { pointProvider, action: null, range, blockedFor: 0, semCamera: true };
+  }
   for (const P of S.plots) {
     const oldTap = P.spr.onTap;
-    P.spr.onTap = () => startMove(() => ({ x: P.x, y: P.y + 64 }), () => oldTap && oldTap(), 60);
+    P.spr.onTap = () => { oldTap && oldTap(); vaiAte(() => ({ x: P.x, y: P.y + 64 }), 60); };
   }
-  // Os animais continuam se movendo naturalmente; o destino acompanha a posição atual do animal.
   for (const A of S.animals) {
     const oldTap = A.spr.onTap;
-    A.spr.onTap = () => startMove(() => ({ x: A.x, y: A.y + 22 }), () => oldTap && oldTap(), 58);
+    A.spr.onTap = () => { oldTap && oldTap(); vaiAte(() => ({ x: A.x, y: A.y + 22 }), 58); };
   }
-  // As instalações passam a ter uma posição de aproximação, evitando que o personagem entre dentro delas.
   for (const obj of staticTargetSprites()) {
     const oldTap = obj.onTap;
     const key = obj.tag || (obj.img === IMG.poco ? 'poco' : '');
-    obj.onTap = () => startMove(() => approaches[key] || ({ x: obj.x, y: obj.y + 80 }), () => oldTap && oldTap(), 62);
+    if (key === 'casa') continue;   // a casa do fazendeiro tem a sua própria cena (dia e noite), logo abaixo
+    obj.onTap = () => { oldTap && oldTap(); vaiAte(() => approaches[key] || ({ x: obj.x, y: obj.y + 80 }), 62); };
   }
   // Tocar no terreno vazio manda o fazendeiro caminhar até o ponto escolhido.
   E.onTapEmpty = worldPoint => startMove(() => worldPoint, null, 24);
+
+  /* ---------- dia e noite: tocar na casa do fazendeiro ----------
+     O fazendeiro vai até a porta e entra; a fazenda escurece até virar noite (estrelas, janelas e
+     lampião acesos, vaga-lumes) e ele sai de novo já de noite. Tocar outra vez traz o dia de volta.
+     Só muda o visual e os sons: plantas e animais seguem o relógio de sempre. */
+  const PORTA = { x: 640, y: 852 };
+  const ceu = { n: 0, de: 0, para: 0, t0: 0, dur: 1.8, dentro: false };
+  const LUZES = [
+    { x: 520, y: 742, r: 34 }, { x: 660, y: 742, r: 34 }, { x: 600, y: 790, r: 40 },   // janelas e porta da casa
+    { x: 1290, y: 742, r: 46 }, { x: 968, y: 790, r: 70, lampiao: true },               // celeiro e lampião
+    { x: 1630, y: 880, r: 40, padaria: true },
+  ];
+  const vagalumes = Array.from({ length: 34 }, (_, k) => ({ x: 200 + (k * 397) % 1450, y: 900 + (k * 263) % 1200, f: k * 1.7 }));
+  const estrelas = Array.from({ length: 70 }, (_, k) => ({ x: (k * 523) % 1800, y: 20 + (k * 131) % 360, f: k * .9, r: .6 + (k % 3) * .45 }));
+  function trocaCeu() {
+    ceu.de = ceu.n; ceu.para = ceu.para ? 0 : 1; ceu.t0 = E.t;
+    toast(ceu.para ? 'Boa noite! A fazenda descansa sob as estrelas.' : 'Bom dia! O galo já cantou em São Bento.');
+    if (window.CF_SOM) window.CF_SOM.noite(!!ceu.para);
+  }
+  function entraEmCasa() {
+    if (ceu.dentro) return;
+    ceu.dentro = true; target = null; player.visible = false;
+    trocaCeu();
+    setTimeout(() => {
+      /* sai pela porta e dá alguns passos na varanda */
+      px = PORTA.x; py = PORTA.y + 8; player.x = px; player.y = py; player.visible = true; ceu.dentro = false;
+      target = { pointProvider: () => ({ x: PORTA.x + 40, y: PORTA.y + 70 }), action: null, range: 8, blockedFor: 0, semCamera: true };
+    }, ceu.dur * 1000 + 350);
+  }
+  if (S.casa) S.casa.onTap = () => {
+    if (ceu.dentro) return;
+    const longe = Math.hypot(px - PORTA.x, py - PORTA.y) > 650;
+    if (longe) { entraEmCasa(); return; }
+    startMove(() => PORTA, entraEmCasa, 30);
+  };
+  E.add({ layer: 1.95, z: 1e9, tag: 'ceuNoite', draw: c => {
+    if (ceu.de !== ceu.para) { const p = Math.min(1, (E.t - ceu.t0) / ceu.dur); ceu.n = ceu.de + (ceu.para - ceu.de) * (p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2); if (p >= 1) ceu.de = ceu.para; }
+    const n = ceu.n; if (n < .005) return;
+    const z = E.cam.zoom, X = wx => (wx - E.cam.x) * z, Y = wy => (wy - E.cam.y) * z, W = E.vw, H = E.vh, t = E.t;
+    c.setTransform(E.dpr, 0, 0, E.dpr, 0, 0);
+    /* escuro azulado, com "furos" de luz onde há janela e lampião */
+    c.globalAlpha = 1; c.fillStyle = `rgba(16,24,58,${.62 * n})`; c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'destination-out';
+    const st = api.state();
+    for (const L of LUZES) {
+      if (L.padaria && !(st && st.padaria && st.padaria.construida)) continue;
+      const r = L.r * z * 2.4, g = c.createRadialGradient(X(L.x), Y(L.y), 0, X(L.x), Y(L.y), r);
+      g.addColorStop(0, `rgba(0,0,0,${.75 * n})`); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.beginPath(); c.arc(X(L.x), Y(L.y), r, 0, 7); c.fill();
+    }
+    c.globalCompositeOperation = 'source-over';
+    for (const L of LUZES) {
+      if (L.padaria && !(st && st.padaria && st.padaria.construida)) continue;
+      const tremula = L.lampiao ? 1 + Math.sin(t * 9) * .04 + Math.sin(t * 23) * .03 : 1;
+      const r = L.r * z * tremula, g = c.createRadialGradient(X(L.x), Y(L.y), 0, X(L.x), Y(L.y), r);
+      g.addColorStop(0, `rgba(255,214,120,${.55 * n})`); g.addColorStop(1, 'rgba(255,190,90,0)'); c.fillStyle = g; c.beginPath(); c.arc(X(L.x), Y(L.y), r, 0, 7); c.fill();
+    }
+    /* estrelas no céu e vaga-lumes no capim */
+    for (const e of estrelas) { const y = Y(e.y); if (y < -4 || y > H) continue; c.globalAlpha = n * (.55 + .45 * Math.sin(t * 2 + e.f)); c.fillStyle = '#fff8dc'; c.beginPath(); c.arc(X(e.x), y, e.r * Math.max(.7, z), 0, 7); c.fill(); }
+    for (const v of vagalumes) {
+      const x = X(v.x + Math.sin(t * .6 + v.f) * 30), y = Y(v.y + Math.cos(t * .5 + v.f) * 18); if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
+      const a = n * Math.max(0, Math.sin(t * 2.2 + v.f)); if (a < .05) continue;
+      const g = c.createRadialGradient(x, y, 0, x, y, 9 * Math.max(.7, z)); g.addColorStop(0, `rgba(230,255,140,${a})`); g.addColorStop(1, 'rgba(230,255,140,0)');
+      c.globalAlpha = 1; c.fillStyle = g; c.beginPath(); c.arc(x, y, 9 * Math.max(.7, z), 0, 7); c.fill();
+    }
+    c.globalAlpha = 1;
+  } });
+  /* a luz dourada de fim de tarde some à noite */
+  const luzTarde = E.after;
+  E.after = c => { if (!luzTarde) return; c.save(); c.globalAlpha = 1 - ceu.n * .85; luzTarde(c); c.restore(); };
+  window.CF_CEU = { get noite() { return ceu.para === 1; }, trocaCeu, ceu };
   // Quando o jogador arrasta o cenário manualmente, a câmera fica sob controle dele e cancela o destino antigo.
   E.cv.addEventListener('pointermove', ev => {
     const p = E._ptr && E._ptr.get(ev.pointerId);
@@ -2268,6 +2347,7 @@ function configurarControlesDoJogador() {
   });
 
   const shadow = E.add({ layer: .8, z: py, draw: c => {
+    if (player.visible === false) return;
     const rx = 20, ry = 7;
     c.save(); c.globalAlpha = .28; c.fillStyle = '#172510'; c.beginPath(); c.ellipse(px, py - 3, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.restore();
   }});
@@ -2282,7 +2362,7 @@ function configurarControlesDoJogador() {
     let len = Math.hypot(vx, vy);
     if (len > 1) { vx /= len; vy /= len; len = 1; }
     let moving = false, blockedThisFrame = false;
-    const movingDirect = len > .12;
+    const movingDirect = len > .12, cameraSegue = !(target && target.semCamera) || movingDirect;
     if (movingDirect) target = null;
     if (!movingDirect && target) {
       let p;
@@ -2305,24 +2385,29 @@ function configurarControlesDoJogador() {
       blockedThisFrame = !okMove;
       if (target && blockedThisFrame) target.blockedFor += dt; else if (target) target.blockedFor = 0;
       if (target && target.blockedFor > 1.0) {
-        target = null; toast('Caminho bloqueado. Use o joystick para contornar o obstáculo.');
+        const avisa = !target.semCamera; target = null;
+        if (avisa) toast('Caminho bloqueado. Use o joystick para contornar o obstáculo.');
       }
     }
     if (moving) {
-      lastActive = t + .85; walkClock += dt * 11;
-      if (t >= poseUntil) {
-        player.img = (Math.floor(walkClock / .28) % 2 === 0 ? (IMG.p_frente || IMG.p_idle) : IMG.p_idle);
-        player.s = 100 / player.img.height;
-      }
-      player.flip = vx < -.05; player.rot = Math.sin(walkClock * 1.3) * .018;
-      player.sy = 1 + Math.abs(Math.sin(walkClock)) * .012;
-      player.x = px; player.y = py + Math.abs(Math.sin(walkClock * 1.7)) * 2.2; player.z = py;
+      if (cameraSegue) lastActive = t + .85;
+      /* um passo a cada meio ciclo: o corpo pende de um lado para o outro e afunda de leve no pé de apoio,
+         sem trocar de imagem (era a troca de imagem que fazia o fazendeiro parecer pular) */
+      walkClock += dt * (keys.run ? 13 : 10);
+      if (t >= poseUntil) { player.img = IMG.p_idle; player.s = 100 / player.img.height; }
+      if (Math.abs(vx) > .05) player.flip = vx < 0;
+      const passo = Math.sin(walkClock);
+      player.rot = passo * .045;
+      player.sy = 1 - Math.abs(passo) * .018;
+      player.sx = 1 + Math.abs(passo) * .01;
+      player.x = px + passo * 1.2; player.y = py; player.z = py;
     } else {
+      player.sx = 1;
       if (t >= poseUntil) poseIdle();
       else { player.x = px; player.y = py; player.z = py; }
     }
     shadow.z = py - 1;
-    if (moving || t < lastActive) {
+    if ((moving && cameraSegue) || t < lastActive) {
       // Segue o personagem suavemente, sem trancos; depois devolve a câmera ao toque livre.
       const z = E.cam.zoom;
       const tx = px - E.vw / (2 * z), ty = py - E.vh / (2 * z) + 72;
@@ -2352,82 +2437,195 @@ function configurarControlesDoJogador() {
 /* ---------- música ambiente da fazenda ----------
    Música procedural original, suave e sem arquivos externos. O áudio só começa após
    uma interação do jogador, conforme as regras de autoplay dos navegadores móveis. */
-(function configurarMusicaAmbiente(){
+(function configurarSomDaFazenda(){
+  /* ---------- som da fazenda ----------
+     Tudo gerado no próprio aparelho (sem arquivos de áudio): uma música calma de viola/sininho e o ambiente
+     da roça. De dia: passarinhos, galinhas, galo, mugido e vento. De noite: grilos e coruja.
+     Liga no primeiro toque na tela (regra dos navegadores) e o botão ♪ liga/desliga, lembrando a escolha. */
   const btn = document.getElementById('musicToggle');
   if (!btn) return;
-  let ctx = null, master = null, timer = null, step = 0, ligada = false, iniciado = false;
-  const bpm = 68;
-  const beatMs = 60000 / bpm;
-  // Melodia pentatônica calma em Sol maior, com pausas para manter o fundo discreto.
-  const melody = [
-    [0, 784, .42], [2, 659, .38], [4, 587, .5], [6, 659, .38],
-    [8, 523, .48], [10, 587, .38], [12, 659, .52], [14, 0, .2],
-    [16, 784, .42], [18, 880, .38], [20, 784, .48], [22, 659, .38],
-    [24, 587, .48], [26, 523, .4], [28, 587, .5], [30, 0, .2]
-  ];
-  const chords = [
-    [196.00,246.94,293.66], [174.61,220.00,261.63],
-    [146.83,185.00,220.00], [164.81,207.65,246.94]
-  ];
-  function tone(freq, when, duration, volume, wave='sine'){
-    if (!ctx || !master || !freq) return;
-    const osc=ctx.createOscillator(), gain=ctx.createGain();
-    osc.type=wave; osc.frequency.setValueAtTime(freq,when);
-    gain.gain.setValueAtTime(.0001,when);
-    gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),when+.055);
-    gain.gain.exponentialRampToValueAtTime(.0001,when+duration);
-    osc.connect(gain); gain.connect(master); osc.start(when); osc.stop(when+duration+.03);
+  let ctx = null, mestre = null, busMusica = null, busAmb = null, eco = null;
+  let ligada = false, iniciado = false, noite = false, timers = [], passo = 0;
+  let preferencia = null; try { preferencia = localStorage.getItem('conecta_fazenda_som'); } catch (_) {}
+  const ICONE_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.8" fill="#fff"/><circle cx="17.5" cy="16" r="2.8" fill="#fff"/></svg>';
+  const ICONE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/><path d="M16 9l5 6M21 9l-5 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  function mostra() {
+    btn.setAttribute('aria-pressed', ligada ? 'true' : 'false');
+    btn.setAttribute('aria-label', ligada ? 'Desligar som da fazenda' : 'Ligar som da fazenda');
+    btn.innerHTML = (ligada ? ICONE_ON : ICONE_OFF) + `<span>${ligada ? 'Som ligado' : 'Som desligado'}</span>`;
   }
-  function chordAt(n){
-    const c=chords[Math.floor(n/8)%chords.length];
-    const now=ctx.currentTime+.03;
-    c.forEach((f,i)=>tone(f,now+i*.035,2.5,.012,'sine'));
-    // Uma nota grave muito discreta, para dar calor sem virar uma batida marcada.
-    tone(c[0]/2,now,2.1,.016,'sine');
+  mostra();
+
+  /* iPhone: com a chavinha do silencioso ligada, o Web Audio fica mudo. Tocar um áudio HTML silencioso
+     no mesmo toque coloca a página no modo "reprodução de mídia" e o som passa a sair. */
+  let silencio = null;
+  function wavSilencioso() {
+    const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, s) => [...s].forEach((ch, i) => b[o + i] = ch.charCodeAt(0));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+    let s = ''; b.forEach(x => s += String.fromCharCode(x)); return 'data:audio/wav;base64,' + btoa(s);
   }
-  function tick(){
-    if(!ligada || !ctx) return;
-    const now=ctx.currentTime+.025;
-    if(step%8===0) chordAt(step/8);
-    const note=melody.find(m=>m[0]===step%32);
-    if(note && note[1]){
-      tone(note[1],now,note[2],.027,'sine');
-      // Harmônico macio para um timbre de sininho de madeira bem leve.
-      tone(note[1]*2,now+.012,note[2]*.55,.004,'sine');
+  function modoMidia() {
+    try { if (!silencio) { silencio = new Audio(wavSilencioso()); silencio.loop = true; silencio.setAttribute('playsinline', ''); silencio.volume = 0.01; } const p = silencio.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+  }
+
+  function prepara() {
+    if (ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    ctx = new AC();
+    mestre = ctx.createGain(); mestre.gain.value = 0; mestre.connect(ctx.destination);
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.connect(mestre);
+    busMusica = ctx.createGain(); busMusica.gain.value = .55; busMusica.connect(comp);
+    busAmb = ctx.createGain(); busAmb.gain.value = .75; busAmb.connect(comp);
+    /* eco curto para a música soar mais "ao ar livre" */
+    eco = ctx.createDelay(1); eco.delayTime.value = .32; const fb = ctx.createGain(); fb.gain.value = .28; const fEco = ctx.createBiquadFilter(); fEco.type = 'lowpass'; fEco.frequency.value = 2400;
+    eco.connect(fEco); fEco.connect(fb); fb.connect(eco); fEco.connect(busMusica);
+    return true;
+  }
+  const ruido = (() => { let buf = null; return () => { if (buf) return buf; buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = buf.getChannelData(0); let ult = 0; for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; ult = (ult + .02 * w) / 1.02; d[i] = ult * 3.5; } return buf; }; })();
+  function nota(freq, quando, dur, vol, { tipo = 'sine', destino = busMusica, ataque = .02, comEco = false } = {}) {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = tipo; o.frequency.setValueAtTime(freq, quando);
+    g.gain.setValueAtTime(.0001, quando); g.gain.exponentialRampToValueAtTime(vol, quando + ataque); g.gain.exponentialRampToValueAtTime(.0001, quando + dur);
+    o.connect(g); g.connect(destino); if (comEco) g.connect(eco); o.start(quando); o.stop(quando + dur + .05); return o;
+  }
+
+  /* ---- música: melodia pentatônica em Sol com acompanhamento dedilhado (viola caipira suave) ---- */
+  const MELODIA = [[0, 784, .5], [2, 659, .4], [4, 587, .6], [6, 659, .4], [8, 523, .55], [10, 587, .4], [12, 659, .7], [16, 784, .5], [18, 880, .4], [20, 784, .55], [22, 659, .4], [24, 587, .5], [26, 523, .45], [28, 587, .8]];
+  const ACORDES = [[196, 247, 294], [175, 220, 262], [147, 185, 220], [165, 208, 247]];
+  const BPM = 72, MEIO = 60 / BPM / 2;
+  function compasso() {
+    if (!ligada) return;
+    const t0 = ctx.currentTime + .05, suave = noite ? .55 : 1;
+    for (let k = 0; k < 8; k++) {
+      const s = (passo + k) % 32, t = t0 + k * MEIO, ac = ACORDES[Math.floor(s / 8) % 4];
+      if (s % 8 === 0) nota(ac[0] / 2, t, 1.6, .09 * suave, { tipo: 'triangle', ataque: .01 });
+      if (s % 2 === 0) nota(ac[(s / 2) % 3], t, .9, .05 * suave, { tipo: 'triangle', ataque: .006 });   // dedilhado
+      const m = MELODIA.find(x => x[0] === s);
+      if (m && !noite || (m && noite && s % 4 === 0)) { nota(m[1], t, m[2] + .25, .1 * suave, { ataque: .012, comEco: true }); nota(m[1] * 2, t + .01, m[2] * .5, .018 * suave, { ataque: .01 }); }
     }
-    step=(step+1)%32;
-    timer=setTimeout(tick,beatMs/2);
+    passo = (passo + 8) % 32;
+    timers.push(setTimeout(compasso, 8 * MEIO * 1000));
   }
-  async function ligar(){
-    try{
-      const AC=window.AudioContext||window.webkitAudioContext;
-      if(!AC) { btn.title='Este navegador não oferece áudio Web Audio'; return; }
-      if(!ctx){ctx=new AC();master=ctx.createGain();master.gain.value=.0;master.connect(ctx.destination);}
-      await ctx.resume();
-      ligada=true; iniciado=true;
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setTargetAtTime(.52,ctx.currentTime,.9);
-      step=0; clearTimeout(timer); tick();
-      btn.setAttribute('aria-pressed','true');btn.setAttribute('aria-label','Desativar música ambiente');btn.innerHTML='♫ <span>Música ligada</span>';
-    }catch(e){ btn.title='Toque novamente para ativar a música'; }
+
+  /* ---- ambiente da roça ---- */
+  const aqui = () => ctx.currentTime + .03;
+  function passarinho() {
+    const t = aqui(), n = 2 + Math.floor(Math.random() * 4), base = 2600 + Math.random() * 1600;
+    for (let i = 0; i < n; i++) {
+      const q = t + i * (.09 + Math.random() * .06), o = ctx.createOscillator(), g = ctx.createGain(), pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.type = 'sine'; o.frequency.setValueAtTime(base * (1 + Math.random() * .2), q); o.frequency.exponentialRampToValueAtTime(base * (1.3 + Math.random() * .5), q + .05); o.frequency.exponentialRampToValueAtTime(base * .9, q + .09);
+      g.gain.setValueAtTime(.0001, q); g.gain.exponentialRampToValueAtTime(.05, q + .012); g.gain.exponentialRampToValueAtTime(.0001, q + .1);
+      if (pan) { pan.pan.value = Math.random() * 1.6 - .8; o.connect(g); g.connect(pan); pan.connect(busAmb); } else { o.connect(g); g.connect(busAmb); }
+      o.start(q); o.stop(q + .12);
+    }
   }
-  function desligar(){
-    ligada=false;clearTimeout(timer);
-    if(ctx&&master){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(.0001,ctx.currentTime,.18);}
-    btn.setAttribute('aria-pressed','false');btn.setAttribute('aria-label','Ativar música ambiente');btn.innerHTML='♫ <span>Música</span>';
+  function galinha() {
+    const t = aqui(), n = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const q = t + i * .16 + (i === n - 1 ? .12 : 0), dur = i === n - 1 ? .32 : .09, f = i === n - 1 ? 760 : 600 + Math.random() * 80;
+      const o = ctx.createOscillator(), g = ctx.createGain(), bp = ctx.createBiquadFilter(); o.type = 'sawtooth'; bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 2.5;
+      o.frequency.setValueAtTime(f, q); o.frequency.exponentialRampToValueAtTime(f * (i === n - 1 ? 1.25 : .82), q + dur);
+      g.gain.setValueAtTime(.0001, q); g.gain.exponentialRampToValueAtTime(.05, q + .015); g.gain.exponentialRampToValueAtTime(.0001, q + dur);
+      o.connect(bp); bp.connect(g); g.connect(busAmb); o.start(q); o.stop(q + dur + .03);
+    }
   }
-  btn.addEventListener('click',()=>{ if(ligada) desligar(); else ligar(); });
-  // A primeira ação do jogador tenta ocultar os controles do navegador quando a API permite,
-  // sem bloquear a ação original. No iPhone, alguns modos do Safari exigem abrir pela Tela de Início.
-  function solicitarTelaCheia(){
-    const raiz=document.documentElement;
-    if(document.fullscreenElement || typeof raiz.requestFullscreen!=='function') return;
-    try { const pedido=raiz.requestFullscreen({navigationUI:'hide'}); if(pedido&&typeof pedido.catch==='function') pedido.catch(()=>{}); } catch(_) {}
+  function galo() {
+    /* "có-co-ri-cóóó": quatro sílabas com o tom subindo e descendo */
+    const t = aqui(), sil = [[.0, .14, 620, 700], [.18, .14, 700, 760], [.36, .16, 820, 900], [.56, .75, 940, 680]];
+    for (const [d, dur, f1, f2] of sil) {
+      const q = t + d, o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), bp = ctx.createBiquadFilter();
+      o.type = 'sawtooth'; o2.type = 'square'; bp.type = 'bandpass'; bp.frequency.value = 1700; bp.Q.value = 1.6;
+      for (const x of [o, o2]) { x.frequency.setValueAtTime(f1 * (x === o2 ? 1.006 : 1), q); x.frequency.linearRampToValueAtTime(f2, q + dur); x.connect(bp); }
+      g.gain.setValueAtTime(.0001, q); g.gain.exponentialRampToValueAtTime(.045, q + .03); g.gain.setValueAtTime(.045, q + dur * .7); g.gain.exponentialRampToValueAtTime(.0001, q + dur);
+      bp.connect(g); g.connect(busAmb); o.start(q); o2.start(q); o.stop(q + dur + .05); o2.stop(q + dur + .05);
+    }
   }
-  const ativarNaPrimeiraInteracao=(ev)=>{ if(ev && ev.target && ev.target.closest && ev.target.closest('#musicToggle')) return; solicitarTelaCheia(); if(!iniciado) ligar(); document.removeEventListener('pointerdown',ativarNaPrimeiraInteracao,true); document.removeEventListener('touchstart',ativarNaPrimeiraInteracao,true); };
-  document.addEventListener('pointerdown',ativarNaPrimeiraInteracao,true);
-  document.addEventListener('touchstart',ativarNaPrimeiraInteracao,{capture:true,passive:true});
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden&&ligada){ if(ctx&&master)master.gain.setTargetAtTime(.0001,ctx.currentTime,.15); } else if(!document.hidden&&ligada&&ctx&&master){ctx.resume().catch(()=>{});master.gain.setTargetAtTime(.52,ctx.currentTime,.8);} });
+  function vaca() {
+    const t = aqui(), o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(), f = ctx.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(118, t); o.frequency.linearRampToValueAtTime(132, t + .35); o.frequency.linearRampToValueAtTime(96, t + 1.5);
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(380, t); lp.frequency.linearRampToValueAtTime(820, t + .5); lp.frequency.linearRampToValueAtTime(300, t + 1.5);
+    f.type = 'peaking'; f.frequency.value = 520; f.gain.value = 8;
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.09, t + .25); g.gain.setValueAtTime(.09, t + 1.1); g.gain.exponentialRampToValueAtTime(.0001, t + 1.6);
+    o.connect(lp); lp.connect(f); f.connect(g); g.connect(busAmb); o.start(t); o.stop(t + 1.7);
+  }
+  let vento = null;
+  function ligaVento() {
+    if (vento) return; const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = ruido(); src.loop = true; lp.type = 'lowpass'; lp.frequency.value = 420; g.gain.value = .035;
+    src.connect(lp); lp.connect(g); g.connect(busAmb); src.start(); vento = { src, g };
+  }
+  function grilos() {
+    const t = aqui();
+    for (let k = 0; k < 2 + Math.floor(Math.random() * 3); k++) {
+      const q = t + k * .32, o = ctx.createOscillator(), g = ctx.createGain(), am = ctx.createOscillator(), amg = ctx.createGain();
+      o.frequency.value = 4300 + Math.random() * 300; am.frequency.value = 38; amg.gain.value = .02;
+      am.connect(amg); amg.connect(g.gain); g.gain.setValueAtTime(.0001, q); g.gain.linearRampToValueAtTime(.02, q + .02); g.gain.linearRampToValueAtTime(.0001, q + .22);
+      o.connect(g); g.connect(busAmb); o.start(q); am.start(q); o.stop(q + .25); am.stop(q + .25);
+    }
+  }
+  function coruja() {
+    const t = aqui();
+    for (const [d, dur] of [[0, .32], [.5, .22], [.78, .55]]) { const o = nota(390, t + d, dur, .07, { destino: busAmb, ataque: .05 }); o.frequency.setValueAtTime(390, t + d); o.frequency.linearRampToValueAtTime(350, t + d + dur); }
+  }
+  function agenda(fn, min, max, quando) {
+    const vai = () => { if (!ligada) return; if (quando()) fn(); timers.push(setTimeout(vai, (min + Math.random() * (max - min)) * 1000)); };
+    timers.push(setTimeout(vai, (min * .3 + Math.random() * min) * 1000));
+  }
+  function iniciaAmbiente() {
+    ligaVento();
+    agenda(passarinho, 1.5, 5, () => !noite);
+    agenda(galinha, 7, 16, () => !noite);
+    agenda(vaca, 22, 45, () => !noite);
+    agenda(galo, 50, 110, () => !noite);
+    agenda(grilos, .6, 1.4, () => noite);
+    agenda(coruja, 18, 40, () => noite);
+  }
+
+  async function ligar() {
+    modoMidia();
+    if (!prepara()) { btn.title = 'Este navegador não toca som.'; return; }
+    try { await ctx.resume(); } catch (_) {}
+    if (ligada) return;
+    ligada = true; iniciado = true;
+    mestre.gain.cancelScheduledValues(ctx.currentTime); mestre.gain.setTargetAtTime(.9, ctx.currentTime, .6);
+    timers.forEach(clearTimeout); timers = []; passo = 0; compasso(); iniciaAmbiente();
+    if (!noite) setTimeout(() => ligada && !noite && galo(), 900);
+    mostra();
+  }
+  function desligar() {
+    ligada = false; timers.forEach(clearTimeout); timers = [];
+    if (ctx && mestre) { mestre.gain.cancelScheduledValues(ctx.currentTime); mestre.gain.setTargetAtTime(.0001, ctx.currentTime, .15); }
+    if (vento) { try { vento.src.stop(); } catch (_) {} vento = null; }
+    try { if (silencio) silencio.pause(); } catch (_) {}
+    mostra();
+  }
+  const guarda = v => { try { localStorage.setItem('conecta_fazenda_som', v); } catch (_) {} };
+  btn.addEventListener('click', ev => { ev.stopPropagation(); if (ligada) { desligar(); guarda('off'); } else { ligar(); guarda('on'); } });
+
+  /* tela cheia e som começam no primeiro toque (o navegador só deixa depois de um gesto da pessoa).
+     No iPhone o áudio só destrava no "soltar o dedo", por isso escutamos pointerup/touchend/click. */
+  function solicitarTelaCheia() {
+    const raiz = document.documentElement;
+    if (document.fullscreenElement || typeof raiz.requestFullscreen !== 'function') return;
+    try { const p = raiz.requestFullscreen({ navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+  }
+  const primeiroToque = ev => {
+    if (ev && ev.target && ev.target.closest && ev.target.closest('#musicToggle')) return;
+    solicitarTelaCheia();
+    if (!iniciado && preferencia !== 'off') ligar();
+    else if (ctx && ctx.state !== 'running' && ligada) ctx.resume().catch(() => {});
+    ['pointerup', 'touchend', 'click'].forEach(t => document.removeEventListener(t, primeiroToque, true));
+  };
+  ['pointerup', 'touchend', 'click'].forEach(t => document.addEventListener(t, primeiroToque, true));
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx || !mestre || !ligada) return;
+    if (document.hidden) mestre.gain.setTargetAtTime(.0001, ctx.currentTime, .15);
+    else { ctx.resume().catch(() => {}); mestre.gain.setTargetAtTime(.9, ctx.currentTime, .6); }
+  });
+  window.CF_SOM = {
+    noite(b) { noite = !!b; if (ligada && ctx) { if (vento) vento.g.gain.setTargetAtTime(noite ? .02 : .035, ctx.currentTime, 1); if (!noite) setTimeout(() => ligada && galo(), 1200); else setTimeout(() => ligada && coruja(), 1500); } },
+    get ligada() { return ligada; }, ligar, desligar,
+  };
 })();
 
 /* ---------- início ---------- */
