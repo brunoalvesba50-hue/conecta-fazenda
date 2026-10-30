@@ -13,6 +13,8 @@ Jogo de fazenda no navegador, ambientado na Serra da Mantiqueira. A primeira ár
 - Complete as **missões** para ganhar moedas e experiência.
 - Construa as **5 casas da vila** (terrenos "À venda" no mapa), que liberam por nível.
 - No botão **Mapa**, veja as 11 cidades da Mantiqueira. Concluir os 8 objetivos de São Bento dá um prêmio (uma vez só) e libera Sapucaí-Mirim.
+- **Sapucaí-Mirim** (2ª cidade) só abre depois de concluir São Bento. No mapa, toque nela e em **Viajar**: lá começa uma fazenda nova (canteiros, animais, padaria, casas e pedidos próprios), e moedas, nível, sementes e celeiro vão junto. A fazenda de São Bento fica guardada e dá para voltar a qualquer hora; o que ficou plantado continua crescendo.
+- Os 8 objetivos de Sapucaí-Mirim só contam o que for feito depois de chegar lá. Concluir tudo dá 400 moedas e libera Santo Antônio do Pinhal (área jogável numa próxima versão).
 - Num jogo novo, o **fazendeiro** ensina o básico. Cada passo só avança quando você faz a ação. Dá para pular e rever em Ajustes.
 
 ## Estrutura
@@ -42,6 +44,7 @@ Nesta fase, o progresso fica salvo **no próprio aparelho** (localStorage). O sa
 ```
 python3 -m http.server 8765
 python3 testes/teste_jogo.py
+python3 testes/teste_cidade2.py
 ```
 Testam o ciclo completo no computador e no celular: plantar, crescer, colher, vender, comprar, animais, entregas, nível, canteiro novo, padaria, salvar/recarregar, tempo com o jogo fechado e save danificado. Também testam zoom e arrasto, 8 tamanhos de tela, estradas (sem atravessar construções), tutorial passo a passo, casas, mapa regional e conclusão de São Bento (prêmio único, save mexido à mão não libera cidade).
 
@@ -50,6 +53,8 @@ Ilustrações geradas para o projeto (referências da região). As peças da pri
 
 ## Pendências
 - **Conquistas e Coleções** ainda não existem (sem botões falsos até existirem).
-- Sapucaí-Mirim é liberada, mas a área jogável dela vem numa próxima versão.
+- Sapucaí-Mirim já é jogável, mas usa um **fundo provisório** (serra desenhada pelo código) e o mesmo desenho de fazenda de São Bento. Falta a ilustração de fundo da cidade (`fundo` da cidade em `REGIOES`, no `index.html`).
+- O jogo que roda é o `index.html` (tudo num arquivo só). A pasta `src/` está desatualizada desde 11/10 e não recebeu a segunda cidade.
+- `testes/teste_jogo.py` está desatualizado em relação ao jogo atual (falha já no toque no canteiro, antes desta mudança). A segunda cidade tem o teste próprio `testes/teste_cidade2.py`.
 - O fazendeiro tem uma pose só no tutorial; mais poses precisam de arte nova.
 - A conferência das cidades é feita no aparelho; vira à prova de trapaça quando o servidor do jogo existir.
