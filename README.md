@@ -53,7 +53,7 @@ Ilustrações geradas para o projeto (referências da região). As peças da pri
 
 ## Pendências
 - **Conquistas e Coleções** ainda não existem (sem botões falsos até existirem).
-- Sapucaí-Mirim já é jogável, mas usa um **fundo provisório** (serra desenhada pelo código) e o mesmo desenho de fazenda de São Bento. Falta a ilustração de fundo da cidade (`fundo` da cidade em `REGIOES`, no `index.html`).
+- O cenário de Sapucaí-Mirim é **desenhado pelo código** a partir de uma foto da cidade (não usamos a foto no jogo): morros de pasto com eucaliptos, a cidade de telhado vermelho na encosta e a **Praça da Matriz** (igreja amarela com bico dourado, ipê rosa, bancos, floreiras e postes de globo) no lugar do pomar. Casa, celeiro, canteiros e animais seguem o mesmo desenho de São Bento. Se chegar uma ilustração de fundo aprovada, basta colocar o nome dela em `fundo` na cidade (`REGIOES`, no `index.html`).
 - O jogo que roda é o `index.html` (tudo num arquivo só). A pasta `src/` está desatualizada desde 11/10 e não recebeu a segunda cidade.
 - `testes/teste_jogo.py` está desatualizado em relação ao jogo atual (falha já no toque no canteiro, antes desta mudança). A segunda cidade tem o teste próprio `testes/teste_cidade2.py`.
 - O fazendeiro tem uma pose só no tutorial; mais poses precisam de arte nova.

@@ -61,7 +61,12 @@ def run(viewport, mobile):
         check(f'[{tag}] fazenda de São Bento fica guardada', s['fazendas'][SB]['padaria']['construida'] and len(s['fazendas'][SB]['casas']) == 3 and s['fazendas'][SB]['canteiros'][0]['cultura'] == 'milho')
         check(f'[{tag}] São Bento continua concluída estando fora', ev(f"CF.G.estadoCidade(CF.st,'{SB}').tipo") == 'concluida')
         check(f'[{tag}] mostra as boas-vindas', 'Sapucaí-Mirim' in ev("document.getElementById('toast').textContent"))
-        check(f'[{tag}] pedidos são de vizinhos de Sapucaí-Mirim', all(e['nome'] in ev(f"CF.G.viajar && JSON.parse(JSON.stringify(CF.st.entregas.map(e=>e.nome)))") for e in s['entregas']))
+        check(f'[{tag}] cenário próprio: praça da Matriz com a igreja', ev("CF.E.sprites.some(s=>s.tag==='igreja')"))
+        x, y = ev("(()=>{const s=CF.E.sprites.find(s=>s.tag==='igreja'); CF.E.setZoom(1); CF.E.centerOn(s.x, s.y-60); const p=CF.E.toScreen(s.x, s.y-60); return CF.pagina(p.x,p.y)})()")
+        ev("document.getElementById('toast').textContent=''"); pg.wait_for_timeout(200); pg.mouse.click(x, y); pg.wait_for_timeout(1500)
+        check(f'[{tag}] tocar na igreja mostra o nome', 'Matriz' in ev("document.getElementById('toast').textContent"), ev("document.getElementById('toast').textContent"))
+        viz = ev(f"__mods['data.js'].REGIOES.find(r=>r.id==='{SM}').vizinhos")
+        check(f'[{tag}] pedidos são de vizinhos de Sapucaí-Mirim', s['entregas'] and all(e['nome'] in viz for e in s['entregas']), [e['nome'] for e in s['entregas']])
         ev("(()=>{const i=CF.st.canteiros.findIndex(c=>c.liberado&&!c.cultura); CF.st.sementes.milho=5; CF.G.plantar(CF.st,i,'milho');})()")
         ob = ev(f"CF.G.objetivos(CF.st,'{SM}')")
         check(f'[{tag}] plantar em Sapucaí-Mirim conta no objetivo da cidade', ob[0]['feito'] == 1, ob[0])
@@ -72,6 +77,7 @@ def run(viewport, mobile):
         with pg.expect_navigation(): ev(f"(()=>{{const r=CF.G.viajar(CF.st,'{SB}'); CF.salvar(); location.reload(); return r}})()")
         abre(); s = st()
         check(f'[{tag}] volta para São Bento com a fazenda de antes', s['cidadeAtual'] == SB and s['padaria']['construida'] and len(s['casas']) == 3 and SM in s['fazendas'])
+        check(f'[{tag}] São Bento continua com o pomar e sem a igreja', not ev("CF.E.sprites.some(s=>s.tag==='igreja')") and ev("CF.E.sprites.filter(s=>s.img===CF.IMG.arvore_frutifera).length") >= 10)
         check(f'[{tag}] o objetivo de Sapucaí-Mirim fica guardado na volta', ev(f"CF.G.objetivos(CF.st,'{SM}')[0].feito") == 1)
 
         # save mexido à mão: estar em Sapucaí-Mirim sem ter concluído São Bento

@@ -500,8 +500,8 @@ const CASAS = [
 /* Campanha: ordem de desbloqueio das cidades (sequência do jogo, não ordem geográfica). */
 const REGIOES = [
   { id: 'sao-bento-do-sapucai', nome: 'São Bento do Sapucaí', ordem: 1, depois: null, fundo: 'fundo_sao_bento' },
-  /* sem fundo próprio ainda: a cena desenha uma serra provisória até chegar a ilustração da cidade */
-  { id: 'sapucai-mirim', nome: 'Sapucaí-Mirim', ordem: 2, depois: 'sao-bento-do-sapucai', premio: { moedas: 400, xp: 90 },
+  /* cenário desenhado pelo código a partir da foto de referência: morros com eucaliptos, cidade na encosta e a praça da Matriz */
+  { id: 'sapucai-mirim', nome: 'Sapucaí-Mirim', ordem: 2, depois: 'sao-bento-do-sapucai', premio: { moedas: 400, xp: 90 }, cenario: 'praca-matriz',
     vizinhos: ['Dona Lurdes do Rio', 'Empório Sapucaí', 'Seu Bené da Ponte', 'Pousada do Vale', 'Feira da Matriz', 'Quitanda da Estação'] },
   { id: 'santo-antonio-do-pinhal', nome: 'Santo Antônio do Pinhal', ordem: 3, depois: 'sapucai-mirim' },
   { id: 'campos-do-jordao', nome: 'Campos do Jordão', ordem: 4, depois: 'santo-antonio-do-pinhal' },
@@ -1318,28 +1318,147 @@ function lockBadge(c, x, y, custo, nivel, st) {
 }
 function coin(c, x, y, r) { const g = c.createRadialGradient(x - r * .3, y - r * .3, 1, x, y, r); g.addColorStop(0, '#fff3a3'); g.addColorStop(.6, '#f6c632'); g.addColorStop(1, '#c98a0e'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.strokeStyle = '#a86f06'; c.lineWidth = 1.5; c.stroke(); }
 
-/* fundo provisório para cidade sem ilustração própria: céu de fim de tarde, serras em camadas e o gramado na frente,
-   no mesmo tamanho e com o gramado na mesma altura do fundo de São Bento (encaixa no chão do mapa) */
-function serraProvisoria(W, H, seed) {
+/* fundo de Sapucaí-Mirim (desenhado pelo código, a partir da foto da cidade): céu azul com nuvens, mata escura à esquerda,
+   morros de pasto arredondados com grupos de eucalipto no alto e a cidade de telhado vermelho e palmeiras na encosta.
+   Mesmo tamanho do fundo de São Bento e gramado na mesma altura, para encaixar no chão do mapa. */
+function fundoSapucaiMirim(W, H, seed) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); const r = rng(11 + seed * 7);
-  const sky = c.createLinearGradient(0, 0, 0, H * .7); sky.addColorStop(0, '#3f8fdc'); sky.addColorStop(.6, '#8cc4ee'); sky.addColorStop(1, '#f3d9a6'); c.fillStyle = sky; c.fillRect(0, 0, W, H);
-  const sol = c.createRadialGradient(W * .08, H * .32, 4, W * .08, H * .32, H * .7); sol.addColorStop(0, 'rgba(255,226,150,.9)'); sol.addColorStop(1, 'rgba(255,226,150,0)'); c.fillStyle = sol; c.fillRect(0, 0, W, H);
-  for (let i = 0; i < 9; i++) { const x = r() * W, y = 30 + r() * H * .25; c.fillStyle = 'rgba(255,255,255,.8)'; for (let k = 0; k < 5; k++) { c.beginPath(); c.ellipse(x + k * 34 - 60, y + Math.sin(k) * 8, 46 + r() * 30, 18 + r() * 10, 0, 0, 7); c.fill(); } }
-  const serra = (base, amp, cor, nev) => {
-    c.fillStyle = cor; c.beginPath(); c.moveTo(0, H);
-    const f1 = .002 + r() * .002, f2 = .007 + r() * .004, p1 = r() * 9, p2 = r() * 9;
-    for (let x = 0; x <= W; x += 8) c.lineTo(x, base - amp * (.6 * Math.sin(x * f1 + p1) + .4 * Math.sin(x * f2 + p2) + 1) / 2);
-    c.lineTo(W, H); c.closePath(); c.fill();
-    if (nev) { c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(0, base - amp * .2, W, amp * .25); }
-  };
-  serra(H * .42, H * .28, '#7d9fb8', true); serra(H * .52, H * .26, '#5d8a6e', true); serra(H * .62, H * .22, '#4c7a3a'); serra(H * .7, H * .14, '#5f8f2c');
-  /* araucárias espalhadas nas encostas da frente */
-  for (let i = 0; i < 40; i++) {
-    const x = r() * W, y = H * (.66 + r() * .08), h = 30 + r() * 46; c.fillStyle = '#2f4f1c'; c.fillRect(x - 2, y - h, 4, h);
-    c.beginPath(); c.ellipse(x, y - h, h * .45, h * .14, 0, 0, 7); c.fill();
+  const sky = c.createLinearGradient(0, 0, 0, H * .62); sky.addColorStop(0, '#1f6fd0'); sky.addColorStop(.7, '#6fb4ee'); sky.addColorStop(1, '#b9dcf4'); c.fillStyle = sky; c.fillRect(0, 0, W, H);
+  /* nuvens de algodão */
+  for (let i = 0; i < 11; i++) {
+    const x = r() * W, y = 24 + r() * H * .2, n = 4 + Math.floor(r() * 4), w = 30 + r() * 26;
+    for (let k = 0; k < n; k++) { const cx = x + (k - n / 2) * w * .8, cy = y - Math.sin(k / (n - 1) * Math.PI) * w * .45;
+      const g = c.createRadialGradient(cx, cy - w * .2, 2, cx, cy, w); g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(225,236,248,.9)');
+      c.fillStyle = g; c.beginPath(); c.arc(cx, cy, w * (.7 + r() * .3), 0, 7); c.fill(); }
+    c.fillStyle = 'rgba(214,228,244,.95)'; c.beginPath(); c.ellipse(x - w * .4, y + w * .3, n * w * .5, w * .32, 0, 0, 7); c.fill();
   }
-  const g = c.createLinearGradient(0, H * .74, 0, H); g.addColorStop(0, '#78a832'); g.addColorStop(1, '#62780c'); c.fillStyle = g; c.fillRect(0, H * .74, W, H * .26);
+  /* morro arredondado: perfil de cosseno, com sombra do lado direito */
+  const morro = (cx, w, alto, base, cor, sombra) => {
+    c.beginPath(); c.moveTo(cx - w, H);
+    for (let x = cx - w; x <= cx + w; x += 6) c.lineTo(x, base - alto * (Math.cos(Math.PI * (x - cx) / w) + 1) / 2);
+    c.lineTo(cx + w, H); c.closePath();
+    const g = c.createLinearGradient(cx - w, 0, cx + w, 0); g.addColorStop(0, cor); g.addColorStop(.55, cor); g.addColorStop(1, sombra); c.fillStyle = g; c.fill();
+  };
+  const topo = (cx, w, alto, base, x) => base - alto * (Math.cos(Math.PI * (x - cx) / w) + 1) / 2;
+  const eucaliptos = (cx, w, alto, base, x0, x1, n) => {
+    for (let i = 0; i < n; i++) { const x = x0 + r() * (x1 - x0), y = topo(cx, w, alto, base, x) + 4 + r() * 6, h = 46 + r() * 40;
+      c.fillStyle = '#5a4a32'; c.fillRect(x - 1.5, y - h * .55, 3, h * .55);
+      c.fillStyle = r() < .5 ? '#25481f' : '#2f5a26'; c.beginPath(); c.ellipse(x, y - h * .62, 7 + r() * 6, h * .42, 0, 0, 7); c.fill(); }
+  };
+  const arvores = (cx, w, alto, base, n, cor) => {
+    for (let i = 0; i < n; i++) { const x = cx - w * .8 + r() * w * 1.6, y = topo(cx, w, alto, base, x) + 10 + r() * (base - topo(cx, w, alto, base, x)) * .7, rr = 5 + r() * 7;
+      c.fillStyle = 'rgba(40,60,20,.35)'; c.beginPath(); c.ellipse(x + 3, y + 2, rr, rr * .4, 0, 0, 7); c.fill();
+      c.fillStyle = cor; c.beginPath(); c.arc(x, y - rr * .6, rr, 0, 7); c.fill(); }
+  };
+  /* mata fechada à esquerda e serra azulada ao fundo */
+  morro(W * .55, W * .5, H * .3, H * .52, '#8fb3a0', '#7c9f8e');
+  morro(W * .12, W * .3, H * .5, H * .68, '#2f6a2c', '#24531f');
+  morro(W * .3, W * .22, H * .3, H * .66, '#3f7f34', '#2f6a2c');
+  /* morros de pasto com eucaliptos no alto */
+  morro(W * .66, W * .26, H * .46, H * .7, '#86ba48', '#6f9f37'); eucaliptos(W * .66, W * .26, H * .46, H * .7, W * .58, W * .64, 14); eucaliptos(W * .66, W * .26, H * .46, H * .7, W * .69, W * .77, 18);
+  morro(W * .95, W * .25, H * .36, H * .7, '#90c050', '#76a83c'); eucaliptos(W * .95, W * .25, H * .36, H * .7, W * .86, W * .9, 5);
+  morro(W * .47, W * .16, H * .2, H * .7, '#7cb043', '#679a33'); eucaliptos(W * .47, W * .16, H * .2, H * .7, W * .44, W * .5, 7);
+  arvores(W * .66, W * .26, H * .46, H * .7, 22, '#3f6f2a'); arvores(W * .95, W * .25, H * .36, H * .7, 14, '#3f6f2a'); arvores(W * .12, W * .3, H * .5, H * .68, 30, '#1f4a1c');
+  /* cidade na encosta: casinhas de parede clara e telhado de barro, com árvores e palmeiras entre elas */
+  const paredes = ['#f4efe4', '#efe1c4', '#f2c6cf', '#bcd7ea', '#f1d98a', '#e9e9e9', '#d9ecd2'];
+  const casa = (x, y, w) => {
+    const h = w * (.45 + r() * .25), tel = r() < .85 ? (r() < .5 ? '#c0562e' : '#a9472a') : '#6b6f74';
+    c.fillStyle = paredes[Math.floor(r() * paredes.length)]; c.fillRect(x, y - h, w, h);
+    c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(x + w * .72, y - h, w * .28, h);
+    c.fillStyle = '#3d4f6a'; for (let k = 0; k < Math.floor(w / 14); k++) c.fillRect(x + 4 + k * 14, y - h * .62, 5, 6);
+    c.fillStyle = tel; c.beginPath(); c.moveTo(x - 3, y - h); c.lineTo(x + w * .18, y - h - w * .24); c.lineTo(x + w * .82, y - h - w * .24); c.lineTo(x + w + 3, y - h); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(80,20,10,.35)'; c.lineWidth = 1; for (let k = 4; k < w; k += 5) { c.beginPath(); c.moveTo(x + k, y - h); c.lineTo(x + k * .64 + w * .18, y - h - w * .24); c.stroke(); }
+  };
+  const palmeira = (x, y, h) => {
+    c.strokeStyle = '#8a7a5a'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + 4, y - h / 2, x + 2, y - h); c.stroke();
+    c.strokeStyle = '#2f6a2a'; c.lineWidth = 3.5; c.lineCap = 'round';
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, l = 16 + r() * 8; c.beginPath(); c.moveTo(x + 2, y - h); c.quadraticCurveTo(x + 2 + Math.cos(a) * l * .6, y - h - 8, x + 2 + Math.cos(a) * l, y - h + Math.abs(Math.sin(a)) * 10 + 4); c.stroke(); }
+  };
+  const moita = (x, y, rr) => { c.fillStyle = r() < .5 ? '#2e5f25' : '#3a7230'; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(x + (k - 1.5) * rr * .6, y - rr * (.5 + r() * .5), rr * (.6 + r() * .3), 0, 7); c.fill(); } };
+  for (let fila = 0; fila < 4; fila++) {
+    const y = H * (.6 + fila * .04); let x = W * .22 + r() * 30;
+    while (x < W * .98) {
+      const t = r(); if (t < .62) { const w = 26 + r() * 30; casa(x, y, w); x += w + 4 + r() * 8; }
+      else if (t < .8) { moita(x + 10, y, 9 + r() * 6); x += 22; } else { palmeira(x + 6, y, 36 + r() * 22); x += 14; }
+    }
+  }
+  /* gramado da frente sobe um pouco por cima das casas da última fileira, sem linha reta na emenda */
+  const g = c.createLinearGradient(0, H * .66, 0, H); g.addColorStop(0, 'rgba(120,168,50,0)'); g.addColorStop(.3, '#78a832'); g.addColorStop(1, '#62780c'); c.fillStyle = g; c.fillRect(0, H * .66, W, H * .34);
   return cv;
+}
+
+/* ---------- praça da Matriz (Sapucaí-Mirim) ---------- */
+const PRACA = { cx: 1250, cy: 1910, hw: 260, hh: 150 };
+const IGREJA_ESCALA = .78; /* menor que o desenho original, para não cobrir os terrenos da vila acima da praça */
+/* chão da praça: bloquete cinza com faixas de tijolo vermelho, desenhado uma vez numa imagem */
+function chaoPraca() {
+  const { hw, hh } = PRACA, cv = document.createElement('canvas'); cv.width = hw * 2 + 8; cv.height = hh * 2 + 8; const c = cv.getContext('2d'), r = rng(5);
+  const ox = hw + 4, oy = hh + 4, losango = k => { c.beginPath(); c.moveTo(ox, oy - hh * k); c.lineTo(ox + hw * k, oy); c.lineTo(ox, oy + hh * k); c.lineTo(ox - hw * k, oy); c.closePath(); };
+  losango(1); c.fillStyle = '#a65f47'; c.fill();
+  losango(.95); c.fillStyle = '#cfc8bb'; c.fill(); c.save(); c.clip();
+  for (let i = 0; i < 1400; i++) { c.fillStyle = ['#c3bcae', '#d8d2c6', '#bab3a4', '#ddd7cc'][Math.floor(r() * 4)]; c.fillRect(r() * cv.width, r() * cv.height, 7, 4); }
+  c.restore();
+  c.lineWidth = 5; c.strokeStyle = '#b5654a'; losango(.82); c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(181,101,74,.8)'; losango(.62); c.stroke();
+  /* caminho de tijolo do portão da igreja até a frente da praça */
+  c.strokeStyle = 'rgba(181,101,74,.75)'; c.lineWidth = 4; c.beginPath(); c.moveTo(ox - 22, oy - hh * .62); c.lineTo(ox - 22 + hw * .4, oy + hh * .2); c.moveTo(ox + 22, oy - hh * .62); c.lineTo(ox + 22 + hw * .4, oy + hh * .2); c.stroke();
+  return cv;
+}
+/* Matriz: fachada amarela com pilastras, base de pedra, janelas em arco, torre com relógio e telhado de bico dourado */
+function igrejaMatriz(c, X, Y) {
+  c.save(); c.translate(X, Y); c.scale(IGREJA_ESCALA, IGREJA_ESCALA); c.translate(-X, -Y);
+  const W = 230, Hn = 150, L = X - W / 2, R = X + W / 2, prof = 90, sobe = 52;
+  c.fillStyle = 'rgba(30,40,20,.3)'; c.beginPath(); c.ellipse(X + 40, Y - 10, 190, 40, 0, 0, 7); c.fill();
+  /* lateral da nave e telhado de barro indo para trás */
+  c.fillStyle = '#c99a4a'; c.beginPath(); c.moveTo(R, Y); c.lineTo(R + prof, Y - sobe); c.lineTo(R + prof, Y - sobe - Hn + 30); c.lineTo(R, Y - Hn + 30); c.closePath(); c.fill();
+  c.fillStyle = '#7b7d80'; c.beginPath(); c.moveTo(R, Y); c.lineTo(R + prof, Y - sobe); c.lineTo(R + prof, Y - sobe - 20); c.lineTo(R, Y - 20); c.closePath(); c.fill();
+  c.fillStyle = '#2d3f73'; for (let k = 0; k < 3; k++) { const x = R + 18 + k * 26, y = Y - 60 - (18 + k * 26) * sobe / prof; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - 30); c.arc(x + 6, y - 30, 6, Math.PI, 0); c.lineTo(x + 12, y); c.closePath(); c.fill(); }
+  const tg = c.createLinearGradient(0, Y - Hn - sobe, 0, Y - Hn + 30); tg.addColorStop(0, '#c96a3c'); tg.addColorStop(1, '#a4492a');
+  c.fillStyle = tg; c.beginPath(); c.moveTo(R + 6, Y - Hn + 32); c.lineTo(R + prof + 6, Y - sobe - Hn + 32); c.lineTo(X + prof * .55, Y - sobe - Hn - 30); c.lineTo(X - 30, Y - Hn - 26); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(90,30,15,.35)'; c.lineWidth = 1.5; for (let k = 0; k < 14; k++) { const t = k / 13; c.beginPath(); c.moveTo(X - 30 + (R + 6 - X + 30) * t, Y - Hn - 26 + 58 * t); c.lineTo(X + prof * .55 + (R + prof + 6 - X - prof * .55) * t, Y - sobe - Hn - 30 + 62 * t); c.stroke(); }
+  /* fachada */
+  const fg = c.createLinearGradient(L, 0, R, 0); fg.addColorStop(0, '#f5d985'); fg.addColorStop(1, '#e2b75e');
+  c.fillStyle = fg; c.fillRect(L, Y - Hn, W, Hn);
+  c.beginPath(); c.moveTo(L, Y - Hn); c.quadraticCurveTo(L + 30, Y - Hn - 26, L + 60, Y - Hn - 16); c.lineTo(R - 60, Y - Hn - 16); c.quadraticCurveTo(R - 30, Y - Hn - 26, R, Y - Hn); c.closePath(); c.fill();
+  c.fillStyle = '#c8923e'; for (const x of [L, L + 46, R - 60, R - 14]) c.fillRect(x, Y - Hn - 8, 14, Hn + 8);
+  c.fillRect(L, Y - Hn - 4, W, 6);
+  c.fillStyle = '#8d8f92'; c.fillRect(L, Y - 22, W, 22); c.fillStyle = 'rgba(0,0,0,.15)'; for (let x = L + 8; x < R; x += 16) c.fillRect(x, Y - 22, 1.5, 22);
+  const janela = (x, y, w, h) => { c.fillStyle = '#f7ecd0'; c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x - 3, y - h); c.arc(x + w / 2, y - h, w / 2 + 3, Math.PI, 0); c.lineTo(x + w + 3, y); c.closePath(); c.fill();
+    c.fillStyle = '#2d3f73'; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - h); c.arc(x + w / 2, y - h, w / 2, Math.PI, 0); c.lineTo(x + w, y); c.closePath(); c.fill(); };
+  janela(L + 20, Y - 40, 16, 34); janela(L + 20, Y - 96, 16, 20); janela(R - 36, Y - 40, 16, 34); janela(R - 36, Y - 96, 16, 20);
+  /* torre */
+  const T = 46, topoT = Y - 270;
+  const tw = c.createLinearGradient(X - T, 0, X + T, 0); tw.addColorStop(0, '#f8de8e'); tw.addColorStop(1, '#e0b45a');
+  c.fillStyle = tw; c.fillRect(X - T, topoT, T * 2, 270);
+  c.fillStyle = '#c8923e'; c.fillRect(X - T, topoT, 10, 270); c.fillRect(X + T - 10, topoT, 10, 270); c.fillRect(X - T - 4, topoT - 6, T * 2 + 8, 8); c.fillRect(X - T - 2, Y - Hn - 6, T * 2 + 4, 6);
+  c.fillStyle = '#8d8f92'; c.fillRect(X - T, Y - 22, T * 2, 22);
+  c.fillStyle = '#f7ecd0'; c.beginPath(); c.moveTo(X - 24, Y); c.lineTo(X - 24, Y - 52); c.arc(X, Y - 52, 24, Math.PI, 0); c.lineTo(X + 24, Y); c.fill();
+  c.fillStyle = '#3a2a1e'; c.beginPath(); c.moveTo(X - 19, Y); c.lineTo(X - 19, Y - 52); c.arc(X, Y - 52, 19, Math.PI, 0); c.lineTo(X + 19, Y); c.fill();
+  janela(X - 30, Y - 100, 12, 22); janela(X + 18, Y - 100, 12, 22);
+  c.fillStyle = '#f7ecd0'; c.beginPath(); c.arc(X, Y - 130, 12, 0, 7); c.fill(); c.fillStyle = '#2d3f73'; c.beginPath(); c.arc(X, Y - 130, 8, 0, 7); c.fill();
+  janela(X - 22, Y - 172, 13, 40); janela(X + 9, Y - 172, 13, 40);
+  c.fillStyle = '#fbfbf7'; c.beginPath(); c.arc(X, topoT + 30, 15, 0, 7); c.fill(); c.strokeStyle = '#7a5a2a'; c.lineWidth = 2.5; c.stroke();
+  c.strokeStyle = '#333'; c.lineWidth = 2; c.beginPath(); c.moveTo(X, topoT + 30); c.lineTo(X, topoT + 20); c.moveTo(X, topoT + 30); c.lineTo(X + 7, topoT + 33); c.stroke();
+  /* bico dourado com escamas e coruchéus nos cantos */
+  const ponta = topoT - 150;
+  c.fillStyle = '#f2cf63'; c.beginPath(); c.moveTo(X - T - 2, topoT - 6); c.lineTo(X, ponta); c.lineTo(X, topoT - 6); c.closePath(); c.fill();
+  c.fillStyle = '#c99a2a'; c.beginPath(); c.moveTo(X + T + 2, topoT - 6); c.lineTo(X, ponta); c.lineTo(X, topoT - 6); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(140,100,20,.45)'; c.lineWidth = 1.2; for (let k = 1; k < 9; k++) { const y = topoT - 6 - (topoT - 6 - ponta) * k / 9, w = (T + 2) * (1 - k / 9); c.beginPath(); c.moveTo(X - w, y); c.lineTo(X + w, y); c.stroke(); }
+  for (const x of [X - T + 2, X + T - 2]) { c.fillStyle = '#e8bf52'; c.beginPath(); c.moveTo(x - 7, topoT - 4); c.lineTo(x, topoT - 34); c.lineTo(x + 7, topoT - 4); c.closePath(); c.fill(); }
+  c.strokeStyle = '#6b5a3a'; c.lineWidth = 3; c.beginPath(); c.moveTo(X, ponta); c.lineTo(X, ponta - 26); c.moveTo(X - 9, ponta - 17); c.lineTo(X + 9, ponta - 17); c.stroke();
+  c.restore();
+}
+/* poste da praça com dois globos brancos */
+function postePraca(c, x, y) {
+  c.fillStyle = 'rgba(30,40,20,.25)'; c.beginPath(); c.ellipse(x + 14, y, 18, 5, 0, 0, 7); c.fill();
+  c.fillStyle = '#3b3f45'; c.fillRect(x - 2.5, y - 74, 5, 74); c.fillRect(x - 8, y - 4, 16, 4);
+  c.strokeStyle = '#3b3f45'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, y - 66); c.lineTo(x + 12, y - 70); c.stroke();
+  for (const [gx, gy] of [[x, y - 82], [x + 14, y - 76]]) { const g = c.createRadialGradient(gx - 3, gy - 3, 1, gx, gy, 9); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#d9dde2'); c.fillStyle = g; c.beginPath(); c.arc(gx, gy, 8.5, 0, 7); c.fill(); }
+}
+/* floreira de tijolo com flores */
+function floreira(c, x, y, flores) {
+  c.fillStyle = '#9a5a3e'; c.fillRect(x - 30, y - 18, 60, 18); c.fillStyle = '#b56e4e'; c.fillRect(x - 30, y - 22, 60, 6);
+  c.fillStyle = '#5a3a1e'; c.fillRect(x - 26, y - 22, 52, 3);
+  if (flores) { const k = 62 / flores.width; c.drawImage(flores, x - 31, y - 20 - flores.height * k * .8, 62, flores.height * k); }
 }
 
 /* ---------- montagem da cena ---------- */
@@ -1350,7 +1469,7 @@ function buildScene(E, IMG, api) {
 
   /* céu + fundo com a Pedra do Baú (leve efeito de profundidade ao mover) */
   const cid = REGIOES.find(r => r.id === api.state().cidadeAtual) || REGIOES[0];
-  const bg = IMG[cid.fundo] || serraProvisoria(IMG.fundo_sao_bento.width, IMG.fundo_sao_bento.height, cid.ordem), bgW = WORLD.w * 1.12, bgH = bg.height * bgW / bg.width;
+  const bg = IMG[cid.fundo] || fundoSapucaiMirim(IMG.fundo_sao_bento.width, IMG.fundo_sao_bento.height, cid.ordem), bgW = WORLD.w * 1.12, bgH = bg.height * bgW / bg.width;
   S.bg = bg; S.bgW = bgW; S.bgH = bgH;
   E.before = c => {
     /* fora do mapa (visão geral): céu em cima e grama embaixo, para nunca aparecer vazio */
@@ -1398,10 +1517,25 @@ function buildScene(E, IMG, api) {
   add({ img: IMG.deposito, x: 1650, y: 1700, s: 220 / IMG.deposito.width, tag: 'deposito', onTap: () => api.tap('deposito') });
   add({ img: IMG.silo, x: 1730, y: 1900, s: 96 / IMG.silo.width, tag: 'silo', onTap: () => api.tap('silo') });
   add({ img: IMG.feno, x: 1560, y: 1760, s: 64 / IMG.feno.width }); add({ img: IMG.feno, x: 1596, y: 1784, s: 58 / IMG.feno.width });
-  /* pomar: árvores em fileiras, com tamanhos e lados variados (não parecem coladas) */
-  add({ img: IMG.portao, x: 1004, y: 1640, s: 80 / IMG.portao.width });
-  for (let x = 1060; x < 1500; x += 82) { add({ img: IMG.cerca, x, y: 1640, s: 84 / IMG.cerca.width, z: 1600 }); add({ img: IMG.cerca, x: x - 30, y: 2010, s: 84 / IMG.cerca.width }); }
-  [[1090, 1760], [1220, 1748], [1350, 1764], [1470, 1752], [1150, 1876], [1280, 1866], [1410, 1880], [1090, 1990], [1220, 1984], [1350, 1994]].forEach(([x, y], i) => tree('arvore_frutifera', x, y, 112 + (i * 37 % 26), i % 2));
+  if (cid.cenario === 'praca-matriz') {
+    /* praça da Matriz: chão de bloquete, igreja ao fundo, ipê rosa no meio, bancos, floreiras e postes de globo */
+    const chao = chaoPraca(), P = PRACA, IX = P.cx - 20, IY = P.cy - P.hh * .55;
+    add({ layer: 0, z: 0, draw: c => c.drawImage(chao, P.cx - P.hw - 4, P.cy - P.hh - 4) });
+    add({ x: IX, y: IY, z: IY, tag: 'igreja', draw: c => igrejaMatriz(c, IX, IY), onTap: () => api.tap('igreja'),
+      hit: (wx, wy) => { const k = IGREJA_ESCALA, dx = (wx - IX) / k, dy = (wy - IY) / k; return (dx > -115 && dx < 205 && dy > -170 && dy < 0) || (Math.abs(dx) < 50 && dy > -420 && dy < 0); } });
+    /* ipê rosa na frente, à esquerda da igreja (como na praça de verdade), num canteiro quadrado */
+    const ix = P.cx - 150, iy = P.cy + 50;
+    add({ x: ix, y: iy - 4, draw: c => { c.fillStyle = '#8a5a3a'; c.beginPath(); c.moveTo(ix, iy - 30); c.lineTo(ix + 50, iy - 5); c.lineTo(ix, iy + 20); c.lineTo(ix - 50, iy - 5); c.closePath(); c.fill(); c.fillStyle = '#6a4a2e'; c.fillRect(ix - 50, iy - 5, 100, 8); } });
+    tree('ipe_rosa', ix, iy + 4, 210);
+    for (const [x, y] of [[P.cx + 70, P.cy + 40], [P.cx + 150, P.cy - 10]]) add({ img: IMG.banco, x, y, s: 80 / IMG.banco.width });
+    for (const [x, y] of [[P.cx + 30, P.cy + 10], [P.cx - 200, P.cy - 10], [P.cx + 200, P.cy + 30], [P.cx + 40, P.cy + 110]]) add({ x, y, draw: c => postePraca(c, x, y) });
+    for (const [x, y] of [[P.cx + 120, P.cy + 70], [P.cx + 190, P.cy - 40], [P.cx - 30, P.cy + 120]]) add({ x, y, draw: c => floreira(c, x, y, IMG.flores) });
+  } else {
+    /* pomar: árvores em fileiras, com tamanhos e lados variados (não parecem coladas) */
+    add({ img: IMG.portao, x: 1004, y: 1640, s: 80 / IMG.portao.width });
+    for (let x = 1060; x < 1500; x += 82) { add({ img: IMG.cerca, x, y: 1640, s: 84 / IMG.cerca.width, z: 1600 }); add({ img: IMG.cerca, x: x - 30, y: 2010, s: 84 / IMG.cerca.width }); }
+    [[1090, 1760], [1220, 1748], [1350, 1764], [1470, 1752], [1150, 1876], [1280, 1866], [1410, 1880], [1090, 1990], [1220, 1984], [1350, 1994]].forEach(([x, y], i) => tree('arvore_frutifera', x, y, 112 + (i * 37 % 26), i % 2));
+  }
   add({ img: IMG.lagoinha, x: 220, y: 860, s: 300 / IMG.lagoinha.width });
   add({ img: IMG.pedras, x: 1740, y: 1310, s: 110 / IMG.pedras.width });
 
@@ -2146,6 +2280,7 @@ const api = {
     else if (o === 'galinheiro') painelAnimais();
     else if (o === 'fazendeiro') { S.farmerPose('p_acenando', 1400); toast(`Olá, ${tituloPerfil()}! Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a ${cidadeAtual().nome}.`); }
     else if (o === 'poco') toast('Água fresquinha da serra.');
+    else if (o === 'igreja') toast(`Igreja Matriz · praça de ${cidadeAtual().nome}`);
     else if (o === 'curral') painelAnimais();
     else if (o === 'deposito') painelCeleiro();
     else if (o === 'silo') toast('Silo da fazenda: em breve guardará a ração dos animais.');
