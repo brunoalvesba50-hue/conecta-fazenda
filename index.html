@@ -580,6 +580,8 @@ class Engine {
   constructor(canvas, world) {
     this.cv = canvas; this.ctx = canvas.getContext('2d');
     this.world = world; this.sprites = []; this.tweens = []; this.cam = { x: 0, y: 0, zoom: 1 };
+    /* até onde a câmera vai: a fazenda e os arredores (mata, pastos vizinhos, cachoeiras) */
+    this.limites = { x0: 0, y0: 0, x1: world.w, y1: world.h };
     this.minZoom = .3; this.maxZoom = 1.5; this.dpr = 1; this.vw = 1; this.vh = 1;
     this.onFrame = null; this.onTapEmpty = null; this.before = null; this.after = null;
     this._masks = new Map(); this._ptr = new Map(); this._drag = null; this.t = 0; this.dt = 0;
@@ -598,7 +600,8 @@ class Engine {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.cv.width = Math.round(this.vw * this.dpr); this.cv.height = Math.round(this.vh * this.dpr);
     /* menor zoom = mapa inteiro cabe na tela (visão geral); maior = detalhes das plantas e casas */
-    this.coverZoom = Math.max(this.vw / this.world.w, this.vh / this.world.h);
+    const L = this.limites, LW = L.x1 - L.x0, LH = L.y1 - L.y0;
+    this.coverZoom = Math.max(this.vw / LW, this.vh / LH);
     /* zoom mínimo = o mapa ainda cobre a tela inteira: nunca aparece nada fora do mapa (céu vazio, bordas) */
     this.minZoom = this.coverZoom;
     this.maxZoom = Math.max(1.7, this.coverZoom * 2.6);
@@ -614,9 +617,10 @@ class Engine {
   /* o mapa nunca some da tela: se a tela é maior que o mapa, ele fica centralizado */
   clamp() {
     const vw = this.vw / this.cam.zoom, vh = this.vh / this.cam.zoom;
-    this.cam.x = vw >= this.world.w ? (this.world.w - vw) / 2 : Math.min(Math.max(0, this.cam.x), this.world.w - vw);
+    const L = this.limites, LW = L.x1 - L.x0, LH = L.y1 - L.y0;
+    this.cam.x = vw >= LW ? L.x0 + (LW - vw) / 2 : Math.min(Math.max(L.x0, this.cam.x), L.x1 - vw);
     /* tela mais alta que o mapa (visão geral no celular): o chão fica embaixo e sobra céu em cima */
-    this.cam.y = vh >= this.world.h ? this.world.h - vh + Math.min(60, (vh - this.world.h) / 2) : Math.min(Math.max(0, this.cam.y), this.world.h - vh);
+    this.cam.y = vh >= LH ? L.y1 - vh + Math.min(60, (vh - LH) / 2) : Math.min(Math.max(L.y0, this.cam.y), L.y1 - vh);
   }
   /* zoom suave pelos botões (mantém o centro da tela no lugar) */
   get calmo() {
@@ -1222,8 +1226,8 @@ function geometria() {
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 /* desenha a rede inteira num contexto (o do chão); oy = deslocamento vertical do chão */
-function desenhaEstradas(c, oy = 0) {
-  const G = geometria(), W = LARGURA, r = rng(11);
+function desenhaEstradas(c, oy = 0, trechos = null) {
+  const G = trechos || geometria(), W = LARGURA, r = rng(11);
   /* a estrada por onde o caminhão passa é mais larga, na medida dele */
   const largura = g => g.larga ? LARGURA_CAMINHAO : W;
   const traço = (extra, cor, alfa = 1, blur = 0, fator = 1) => {
@@ -1282,7 +1286,7 @@ function desenhaEstradas(c, oy = 0) {
   c.restore();
 }
 
-return {LARGURA,PONTOS,TRECHOS,geometria,desenhaEstradas,usaRede};
+return {LARGURA,PONTOS,TRECHOS,geometria,desenhaEstradas,usaRede,suaviza};
 })();
 
 __mods["scene.js"] = (() => {
@@ -1292,7 +1296,7 @@ const { Sprite, ease } = __mods["engine.js"];
 const { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS, CASAS, REGIOES } = __mods["data.js"];
 const { estadoCanteiro, estadoAnimal, estadoPadaria, fmtTempo, agora } = __mods["game.js"];
 const { CROPMETA } = __mods["cropmeta.js"];
-const { desenhaEstradas, usaRede } = __mods["roads.js"];
+const { desenhaEstradas, usaRede, suaviza, geometria } = __mods["roads.js"];
 
 /* mapa mais alto para aproveitar o celular na vertical: em cima a fazenda, embaixo a mata, o pomar e a saída para a cidade */
 const WORLD = { w: 1800, h: 2340 };
@@ -1654,6 +1658,106 @@ function montaSapucaiMirim(E, IMG, api, S, add, tree, LY) {
   return { casa, celeiro };
 }
 
+/* ---------- arredores: o que existe em volta da fazenda ----------
+   A câmera passa da cerca: dos lados e embaixo há mata fechada, cachoeiras, pastos de vizinhos com vacas e
+   bezerros andando, galinhas soltas e pássaros voando. Só enfeite: nada aqui muda o jogo. */
+const ARREDOR = { lado: 1100, baixo: 1200 };
+/* continuação da estrada de saída até o fim dos arredores (o caminhão vai e volta por ela) */
+const SAIDA_EXTRA = { 'sao-bento-do-sapucai': [[660, 2700], [560, 3000], [640, 3300], [620, 3760]], 'sapucai-mirim': [[1130, 2700], [1240, 3000], [1150, 3300], [1160, 3760]] };
+function montaArredores(E, IMG, api, S, add, sway, cid) {
+  const W = WORLD.w, H = WORLD.h, X0 = -ARREDOR.lado, X1 = W + ARREDOR.lado, Y1 = H + ARREDOR.baixo, r = rng(77 + cid.ordem * 13), smm = cid.id === 'sapucai-mirim';
+  const a = o => add(Object.assign({ tag: 'arredor' }, o));
+  /* estrada: pega o fim do trecho que sai da fazenda e continua até o fim do mapa */
+  const g = geometria().find(t => t.ate === 'saida' || t.de === 'saida');
+  const ext = SAIDA_EXTRA[cid.id] || SAIDA_EXTRA['sao-bento-do-sapucai'];
+  let estrada = [];
+  if (g) {
+    const pts = g.ate === 'saida' ? g.pts : g.pts.slice().reverse(), cauda = pts.filter(p => p[1] > H - 160);
+    estrada = cauda.concat(suaviza([cauda[cauda.length - 1], ...ext]).slice(1));
+    const ex0 = Math.min(...estrada.map(p => p[0])) - 140, ex1 = Math.max(...estrada.map(p => p[0])) + 140, ey0 = H - 170;
+    const cv = document.createElement('canvas'); cv.width = Math.ceil(ex1 - ex0); cv.height = Math.ceil(Y1 + 80 - ey0); const c = cv.getContext('2d');
+    c.translate(-ex0, -ey0); desenhaEstradas(c, 0, [{ de: 'saida', ate: 'fim', larga: true, pts: estrada.filter(p => p[1] > H - 150) }]);
+    /* só a parte de fora do mapa (a de dentro já está no chão da fazenda) */
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, H - ey0 - 2);
+    a({ layer: 0, z: 0, draw: cx => cx.drawImage(cv, ex0, ey0) });
+  }
+  const longeDaEstrada = (x, y) => !estrada.length || estrada.every(p => Math.hypot(p[0] - x, p[1] - y) > 150);
+  /* clareiras: pastos dos vizinhos, cachoeiras e um terreiro com galinhas */
+  const pastos = smm ? [{ x0: -930, y0: 1500, x1: -380, y1: 1760 }, { x0: 2160, y0: 2500, x1: 2720, y1: 2760 }] : [{ x0: -900, y0: 1200, x1: -350, y1: 1460 }, { x0: 2150, y0: 2140, x1: 2700, y1: 2400 }];
+  const quedas = smm ? [[-520, 2700, 380], [2380, 1250, 360], [200, 3260, 400], [1650, 3150, 340]] : [[-600, 2300, 380], [2420, 1500, 360], [260, 3200, 400], [1500, 3250, 340]];
+  const terreiro = smm ? { x0: 1400, y0: 2700, x1: 1800, y1: 2860 } : { x0: 980, y0: 2760, x1: 1380, y1: 2900 };
+  const livre = (x, y) => {
+    if (x > -90 && x < W + 90 && y < H + 300) return false;                         /* dentro da fazenda e a borda dela (copas altas cobririam a fazenda) */
+    if (pastos.some(p => x > p.x0 - 90 && x < p.x1 + 90 && y > p.y0 - 140 && y < p.y1 + 70)) return false;
+    if (quedas.some(([qx, qy, qw]) => Math.abs(x - qx) < qw * .62 && y > qy - qw * .5 && y < qy + 90)) return false;
+    if (x > terreiro.x0 - 80 && x < terreiro.x1 + 80 && y > terreiro.y0 - 120 && y < terreiro.y1 + 60) return false;
+    return longeDaEstrada(x, y);
+  };
+  /* mata: manchas de floresta (ruído suave) com clareiras de pasto entre elas, mais fechada longe da fazenda */
+  const f1 = r() * 9, f2 = r() * 9, f3 = r() * 9;
+  const mancha = (x, y) => .5 + .32 * Math.sin(x * .0036 + f1) * Math.cos(y * .0042 + f2) + .18 * Math.sin((x + y) * .009 + f3);
+  const especies = smm ? [['araucaria', 20], ['pinheiro', 14], ['pinheiro2', 14], ['ipe_rosa', 12], ['ipe_amarelo', 10], ['arvore_frutifera', 14], ['palmeira', 7]]
+    : [['araucaria', 36], ['pinheiro', 18], ['pinheiro2', 14], ['ipe_amarelo', 10], ['ipe_rosa', 8], ['arvore_frutifera', 14]];
+  const total = especies.reduce((t, e) => t + e[1], 0), sorteia = () => { let v = r() * total; for (const [n, p] of especies) if ((v -= p) < 0) return n; return especies[0][0]; };
+  for (let y = 520; y < Y1 + 40; y += 92) for (let x = X0 + 30; x < X1; x += 104) {
+    const px = x + (r() - .5) * 100, py = y + (r() - .5) * 80; if (!livre(px, py)) continue;
+    const dist = Math.min(px < 0 ? -px : px > W ? px - W : 9e9, py > H ? py - H : 9e9), m = mancha(px, py);
+    if (m < .42 || r() > Math.min(.95, (m - .3) * 1.6 + dist / 2400)) continue;
+    const n = sorteia(), w = 110 + r() * 90;
+    if (n === 'palmeira') { const h = 170 + r() * 90; a({ x: px, y: py, z: py, draw: c => palmeira(c, px, py, h) }); continue; }
+    const spr = a({ img: IMG[n], x: px, y: py, s: w / IMG[n].width, flip: r() < .5 }); sway.push({ s: spr, ph: px * .013 });
+  }
+  /* cachoeiras com pedras e flores */
+  for (const [qx, qy, qw] of quedas) {
+    a({ img: IMG.lagoinha, x: qx, y: qy, s: qw / IMG.lagoinha.width, flip: r() < .5, onTap: () => api.tap('cachoeira') });
+    a({ img: IMG.pedras, x: qx + qw * .45, y: qy + 10, s: 90 / IMG.pedras.width }); a({ img: IMG.flores, x: qx - qw * .45, y: qy + 20, s: 54 / IMG.flores.width });
+  }
+  /* pastos dos vizinhos: cerca, porteira e vacas com bezerro */
+  const fw = 86, cs = fw / IMG.cerca.width, bichos = [];
+  for (const p of pastos) {
+    for (let x = p.x0 - 20; x < p.x1 + 40; x += fw - 4) { a({ img: IMG.cerca, x: x + fw / 2, y: p.y0 - 10, s: cs, z: p.y0 - 40 }); const mid = Math.abs(x - (p.x0 + p.x1) / 2) < fw / 2; a({ img: mid ? IMG.portao : IMG.cerca, x: x + fw / 2, y: p.y1 + 40, s: mid ? fw / IMG.portao.width : cs, z: p.y1 + 40 }); }
+    for (let k = 0; k < 3; k++) bichos.push({ tipo: 'vaca', area: p, larg: 128 });
+    if (IMG.bezerro) bichos.push({ tipo: 'bezerro', area: p, larg: 84 });
+  }
+  for (let k = 0; k < 5; k++) bichos.push({ tipo: 'galinha', area: terreiro, larg: 58 });
+  if (IMG.galo) bichos.push({ tipo: 'galo', area: terreiro, larg: 66 });
+  if (IMG.pintinhos) a({ img: IMG.pintinhos, x: (terreiro.x0 + terreiro.x1) / 2, y: terreiro.y1 - 20, s: 70 / IMG.pintinhos.width });
+  a({ img: IMG.feno, x: terreiro.x0 - 30, y: terreiro.y0 + 40, s: 64 / IMG.feno.width }); a({ img: IMG.cesto, x: terreiro.x1 + 20, y: terreiro.y1, s: 46 / IMG.cesto.width });
+  const viz = bichos.map(b => {
+    const ar = b.area, x = ar.x0 + 50 + r() * (ar.x1 - ar.x0 - 100), y = ar.y0 + 30 + r() * (ar.y1 - ar.y0 - 60), img = IMG[b.tipo === 'vaca' ? 'vaca1' : b.tipo === 'galinha' ? 'galinha1' : b.tipo];
+    const spr = a({ img, x, y, s: b.larg / img.width, onTap: () => api.tap(b.tipo === 'galinha' || b.tipo === 'galo' ? 'galinhaVizinho' : 'vacaVizinho') });
+    return Object.assign(b, { spr, x, y, tx: x, ty: y, espera: r() * 4, dir: 1, hop: 0 });
+  });
+  /* pássaros: bandos em V atravessando o céu e a mata */
+  const bandos = Array.from({ length: 3 }, (_, k) => ({ y: 600 + k * 900 + r() * 300, v: 40 + r() * 30, fase: r() * 1000, n: 5 + Math.floor(r() * 4) }));
+  a({ layer: 3, draw: c => {
+    if (E.calmo) return;
+    for (const b of bandos) {
+      const vx = (E.t * b.v + b.fase) % (X1 - X0 + 600) + X0 - 300, vy = b.y + Math.sin(E.t * .3 + b.fase) * 60;
+      c.strokeStyle = 'rgba(40,40,40,.75)'; c.lineWidth = 2.4; c.lineCap = 'round';
+      for (let i = 0; i < b.n; i++) { const bx = vx - Math.abs(i - b.n / 2) * 26, by = vy + (i - b.n / 2) * 18, asa = Math.sin(E.t * 9 + i) * 5;
+        c.beginPath(); c.moveTo(bx - 9, by - asa); c.quadraticCurveTo(bx - 4, by - 5, bx, by); c.quadraticCurveTo(bx + 4, by - 5, bx + 9, by - asa); c.stroke(); }
+    }
+  } });
+  S.vizinhos = viz;
+  S.limites = { x0: X0, y0: 0, x1: X1, y1: Y1 };
+  S.saidaExtra = ext;
+}
+/* bichos dos vizinhos passeando (a mesma ideia dos animais da fazenda, sem fome nem produção) */
+function passeiaVizinhos(S, E, dt) {
+  for (const b of S.vizinhos || []) {
+    const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy), ave = b.tipo === 'galinha' || b.tipo === 'galo', vel = (ave ? 46 : b.tipo === 'bezerro' ? 30 : 20) * dt;
+    if (d > 2) { b.x += dx / d * Math.min(vel, d); b.y += dy / d * Math.min(vel, d); b.dir = dx >= 0 ? 1 : -1; if (ave) b.hop += dt * 14; }
+    else if ((b.espera -= dt) <= 0) { const ar = b.area; b.tx = ar.x0 + 40 + Math.random() * (ar.x1 - ar.x0 - 80); b.ty = ar.y0 + 30 + Math.random() * (ar.y1 - ar.y0 - 60); b.espera = 2 + Math.random() * (ave ? 3 : 6); }
+    const parado = d <= 2 && Math.sin(E.t * .7 + b.x) > 0;
+    if (b.tipo === 'vaca') b.spr.img = parado ? IMG_V.vaca2 : IMG_V.vaca1;
+    else if (b.tipo === 'galinha') b.spr.img = parado && Math.sin(E.t * 9 + b.y) > .2 ? IMG_V.galinha2 : IMG_V.galinha1;
+    b.spr.s = b.larg / b.spr.img.width; b.spr.flip = b.dir < 0;
+    b.spr.x = b.x; b.spr.y = b.y - (ave && d > 2 ? Math.abs(Math.sin(b.hop)) * 5 : 0); b.spr.z = b.y;
+  }
+}
+let IMG_V = null;
+
 /* ---------- montagem da cena ---------- */
 function buildScene(E, IMG, api) {
   const S = { plots: [], animals: [], fx: [], farmer: null, padaria: null, plantMode: null };
@@ -1685,7 +1789,9 @@ function buildScene(E, IMG, api) {
     c.drawImage(ground, 0, GROUND_TOP);
     const vx = E.cam.x, vw = E.vw / E.cam.zoom;
     if (vx < 0 || vx + vw > WORLD.w) { const g = gramaFora(); c.save(); c.scale(-1, 1); c.drawImage(g, 0, GROUND_TOP); c.drawImage(g, -2 * WORLD.w, GROUND_TOP); c.restore(); }
-    if (E.cam.y + E.vh / E.cam.zoom > WORLD.h) { const g = gramaFora(); c.save(); c.translate(0, 2 * WORLD.h); c.scale(1, -1); c.drawImage(g, 0, GROUND_TOP); c.restore(); }
+    if (E.cam.y + E.vh / E.cam.zoom > WORLD.h) { const g = gramaFora(); c.save(); c.translate(0, 2 * WORLD.h); c.scale(1, -1); c.drawImage(g, 0, GROUND_TOP); c.restore();
+      /* cantos de baixo (só nos arredores) */
+      if (vx < 0 || vx + vw > WORLD.w) { c.save(); c.translate(0, 2 * WORLD.h); c.scale(-1, -1); c.drawImage(g, 0, GROUND_TOP); c.drawImage(g, -2 * WORLD.w, GROUND_TOP); c.restore(); } }
   } });
 
   /* árvores e natureza (fundo da propriedade) */
@@ -1796,6 +1902,9 @@ function buildScene(E, IMG, api) {
     return L;
   });
 
+  /* arredores: mata, cachoeiras e vizinhos em volta da fazenda */
+  IMG_V = IMG; montaArredores(E, IMG, api, S, add, sway, cid);
+
   /* fazendeiro */
   const [fx, fy] = LY ? LY.fazendeiro : [600, 975];
   S.farmer = add({ img: IMG.p_idle, x: fx, y: fy, s: 100 / IMG.p_idle.height, onTap: () => api.tap('fazendeiro') });
@@ -1892,6 +2001,7 @@ function buildScene(E, IMG, api) {
     acc += dt; const st = api.state();
     if (acc > .2) { acc = 0; const now = agora(); for (const P of S.plots) { P.e = estadoCanteiro(st, P.i, now); P.hasPlant = P.e.tipo === 'crescendo' || P.e.tipo === 'pronto'; } api.tick && api.tick(now); }
     for (const A of S.animals) stepAnimal(A, dt);
+    passeiaVizinhos(S, E, dt);
     const built = st.padaria.construida; S.padaria.alpha = built ? 1 : .55;
   };
   /* luz de fim de tarde e vinheta, por cima de tudo */
@@ -2463,6 +2573,9 @@ const api = {
     else if (o === 'galinheiro') painelAnimais();
     else if (o === 'fazendeiro') { S.farmerPose('p_acenando', 1400); toast(`Olá, ${tituloPerfil()}! Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a ${cidadeAtual().nome}.`); }
     else if (o === 'poco') toast('Água fresquinha da serra.');
+    else if (o === 'cachoeira') toast('Cachoeira da Mantiqueira: água gelada descendo da serra.');
+    else if (o === 'vacaVizinho') toast('As vacas do sítio vizinho pastando.');
+    else if (o === 'galinhaVizinho') toast('Galinhas soltas no terreiro do vizinho.');
     else if (o === 'igreja') toast(`Igreja Matriz · praça de ${cidadeAtual().nome}`);
     else if (o === 'letreiro') toast(`Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a ${cidadeAtual().nome}! O letreiro mais fotografado da cidade.`);
     else if (o === 'curral') painelAnimais();
@@ -2507,7 +2620,7 @@ function visaoInicial() {
 let mexeu = false; ['pointerdown', 'wheel'].forEach(t => $('game').addEventListener(t, () => { mexeu = true; }, { passive: true }));
 $('zIn').onclick = () => E.zoomTo(E.cam.zoom * 1.35);
 $('zOut').onclick = () => E.zoomTo(E.cam.zoom / 1.35);
-$('zAll').onclick = () => E.flyTo(WORLD.w / 2, WORLD.h / 2, E.minZoom);
+$('zAll').onclick = () => { const L = E.limites; E.flyTo((L.x0 + L.x1) / 2, (L.y0 + L.y1) / 2, E.minZoom); };
 $('zHome').onclick = () => { const v = visaoInicial(); E.flyTo(v.x, v.y, v.z); };
 setInterval(() => { if (!E) return; $('zIn').disabled = E.cam.zoom >= E.maxZoom - .001; $('zOut').disabled = E.cam.zoom <= E.minZoom + .001; }, 300);
 $('bCeleiro').onclick = painelCeleiro; $('bMapa').onclick = painelMapa; $('bConfig').onclick = painelAjustes; $('bGanhar').onclick = painelGanhar;
@@ -3165,8 +3278,10 @@ function configurarVidaNaFazenda() {
     spr: add({ img: IMG.trator, x: TRATOR.pts[0][0], y: TRATOR.pts[0][1], s: 150 / IMG.trator.width, tag: 'trator', onTap: () => toast('O trator está preparando a terra do pasto.') }) } : null;
 
   /* ---- caminhão de entregas: o que você vende vai para a cidade ---- */
-  const ROTA = LY ? caminho(suavizaPts(LY.caminhao.rota)) : caminho(suavizaPts([[1150, 890], [1000, 888], [860, 896], [722, 906], [668, 990], [622, 1066], [604, 1132], [592, 1198], [598, 1262],
-    [612, 1340], [620, 1440], [628, 1540], [664, 1720], [668, 1900], [646, 2060], [626, 2230], [640, 2400], [652, 2640]]));
+  /* a rota termina na estrada que continua pelos arredores */
+  const comSaida = pts => S.saidaExtra ? pts.filter(p => p[1] <= 2400).concat(S.saidaExtra) : pts;
+  const ROTA = LY ? caminho(suavizaPts(comSaida(LY.caminhao.rota))) : caminho(suavizaPts(comSaida([[1150, 890], [1000, 888], [860, 896], [722, 906], [668, 990], [622, 1066], [604, 1132], [592, 1198], [598, 1262],
+    [612, 1340], [620, 1440], [628, 1540], [664, 1720], [668, 1900], [646, 2060], [626, 2230], [640, 2400], [652, 2640]])));
   const TK = { estado: 'parado', s: 0, v: 0, carga: 0, pendente: 0, ultima: 0, foraAte: 0, saiEm: 0 };
   const [kx, ky] = LY ? LY.caminhao.parado : [1150, 892];
   const caminhao = ok('caminhao_desce') ? add({ img: IMG.caminhao_sobe, x: kx, y: ky, s: 140 / IMG.caminhao_sobe.width, flip: true, tag: 'caminhao',
@@ -3325,6 +3440,7 @@ function configurarSombras() {
   E = new Engine($('game'), WORLD);
   configurarRenderAdaptativo();
   S = buildScene(E, IMG, api);
+  if (S.limites) { E.limites = S.limites; E.resize(); }
   { const v = visaoInicial(); E.setZoom(v.z); E.centerOn(v.x, v.y); }
   window.CF = { get st() { return st; }, E, S, G, WORLD, IMG, salvar: salvarJa, pagina: (x, y) => girado ? [innerWidth - y, x] : [x, y] };
   TUT = criaTutorial({ st: () => st, S, G, $, mudou });

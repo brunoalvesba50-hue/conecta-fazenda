@@ -65,6 +65,11 @@ def run(viewport, mobile):
         x, y = ev("(()=>{const s=CF.E.sprites.find(s=>s.tag==='igreja'); CF.E.setZoom(1); CF.E.centerOn(s.x, s.y-60); const p=CF.E.toScreen(s.x, s.y-60); return CF.pagina(p.x,p.y)})()")
         ev("document.getElementById('toast').textContent=''"); pg.wait_for_timeout(200); pg.mouse.click(x, y); pg.wait_for_timeout(1500)
         check(f'[{tag}] tocar na igreja mostra o nome', 'Matriz' in ev("document.getElementById('toast').textContent"), ev("document.getElementById('toast').textContent"))
+        lim = ev("CF.E.limites")
+        check(f'[{tag}] dá para rolar além da fazenda (lados e embaixo)', lim['x0'] < 0 and lim['x1'] > 1800 and lim['y1'] > 2340, lim)
+        ev("CF.E.setZoom(0.01); CF.E.centerOn(-900, 1500)"); pg.wait_for_timeout(200)
+        check(f'[{tag}] câmera chega aos arredores e o zoom afasta mais', ev("CF.E.cam.x") < -500 and ev("CF.E.minZoom") < ev("Math.max(CF.E.vw/1800, CF.E.vh/2340)"))
+        check(f'[{tag}] arredores com mata, cachoeiras e bichos dos vizinhos', ev("CF.E.sprites.filter(s=>s.tag==='arredor').length") > 150 and ev("CF.S.vizinhos.length") >= 8)
         check(f'[{tag}] letreiro da cidade no fundo da fazenda', ev("CF.E.sprites.some(s=>s.tag==='letreiro')"))
         # layout próprio: canteiros, sede e celeiro em outro lugar que em São Bento
         p0 = ev("__mods['scene.js'].plotPos(4)")

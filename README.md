@@ -8,6 +8,7 @@ Jogo de fazenda no navegador, ambientado na Serra da Mantiqueira. A primeira ár
 - Toque num **canteiro vazio**, escolha a semente e toque em outros canteiros para continuar plantando.
 - As plantas crescem pelo relógio, mesmo com o jogo fechado. Quando aparecer o balão ✓, toque para **colher**, ou use o botão **Colher**.
 - No **Celeiro**, venda os produtos. As **Entregas** pagam mais.
+- O mapa vai além da cerca: arraste para os lados e para baixo, ou afaste o zoom, para ver os **arredores** (mata, cachoeiras, pastos dos vizinhos com vacas e bezerros andando, galinhas soltas, pássaros e a estrada saindo da cidade). São só paisagem, não mudam o jogo.
 - Toque nas **vacas e galinhas** para alimentar (com milho) e depois coletar leite e ovos.
 - Use **Construir** para liberar canteiros, aumentar o celeiro e construir a **Padaria**, que faz queijo da serra e cestas da roça.
 - Complete as **missões** para ganhar moedas e experiência.
