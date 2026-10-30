@@ -1139,6 +1139,58 @@ const TRECHOS = [
   { de: 'cruzSul',   ate: 'pasto',     via: [[760, 1292], [1000, 1312], [1240, 1306]] },
 ];
 
+/* rede de Sapucaí-Mirim: outro desenho de fazenda (sede à direita, celeiro à esquerda, estrada central
+   que desce da praça da Matriz até a saída). São Bento usa a rede de cima, sem mudança. */
+const REDES = {
+  'sapucai-mirim': {
+    pontos: {
+      praca:      { x: 1176, y: 936,  tipo: 'porta' },      // entrada da praça da Matriz
+      letreiro:   { x: 560,  y: 724,  tipo: 'porta' },      // em frente ao letreiro da cidade
+      cruzPraca:  { x: 1110, y: 990,  tipo: 'cruzamento' },
+      cruzCentro: { x: 1110, y: 1250, tipo: 'cruzamento' },
+      cruzCasa:   { x: 1300, y: 1290, tipo: 'cruzamento' },
+      casa:       { x: 1500, y: 1281, tipo: 'porta' },      // varanda da sede
+      cruzPoco:   { x: 850,  y: 1210, tipo: 'cruzamento' },
+      cruzCel:    { x: 560,  y: 1200, tipo: 'cruzamento' },
+      celeiro:    { x: 402,  y: 1166, tipo: 'porta' },
+      lago:       { x: 380,  y: 1520, tipo: 'porta' },
+      cruzSul:    { x: 1110, y: 1620, tipo: 'cruzamento' },
+      padaria:    { x: 1350, y: 1652, tipo: 'porta' },
+      cruzLeste:  { x: 1560, y: 1712, tipo: 'cruzamento' },
+      galinheiro: { x: 1740, y: 1836, tipo: 'porta' },
+      cruzBaixo:  { x: 1110, y: 1980, tipo: 'cruzamento' },
+      chiqueiro:  { x: 968,  y: 1836, tipo: 'porta' },
+      pasto:      { x: 400,  y: 1890, tipo: 'porta' },      // porteira do pasto
+      saida:      { x: 1110, y: 2400, tipo: 'saida' },
+    },
+    trechos: [
+      { de: 'cruzPraca',  ate: 'praca',      via: [] },
+      { de: 'cruzPraca',  ate: 'letreiro',   via: [[900, 950], [700, 800]] },
+      { de: 'cruzPraca',  ate: 'cruzCentro', via: [[1112, 1120]] },
+      { de: 'cruzCentro', ate: 'cruzCasa',   via: [[1200, 1275]] },
+      { de: 'cruzCasa',   ate: 'casa',       via: [[1400, 1295]] },
+      { de: 'cruzCentro', ate: 'cruzPoco',   via: [[980, 1235]], larga: true },
+      { de: 'cruzPoco',   ate: 'cruzCel',    via: [[700, 1212]], larga: true },
+      { de: 'cruzCel',    ate: 'celeiro',    via: [] },
+      { de: 'cruzCel',    ate: 'lago',       via: [[470, 1300], [400, 1420]] },
+      { de: 'cruzCentro', ate: 'cruzSul',    via: [[1105, 1440]], larga: true },
+      { de: 'cruzSul',    ate: 'padaria',    via: [[1240, 1650]] },
+      { de: 'cruzSul',    ate: 'cruzLeste',  via: [[1340, 1700]] },
+      { de: 'cruzLeste',  ate: 'galinheiro', via: [[1670, 1764]] },
+      { de: 'cruzSul',    ate: 'cruzBaixo',  via: [[1112, 1800]], larga: true },
+      { de: 'cruzBaixo',  ate: 'chiqueiro',  via: [[1030, 1906]] },
+      { de: 'cruzBaixo',  ate: 'pasto',      via: [[820, 1966], [560, 1932]] },
+      { de: 'cruzBaixo',  ate: 'saida',      via: [[1120, 2150], [1110, 2300]], larga: true },
+    ],
+  },
+};
+/* troca a rede pela da cidade (mesmos objetos, para quem já leu PONTOS e TRECHOS) */
+function usaRede(id) {
+  const r = REDES[id]; if (!r) return;
+  for (const k of Object.keys(PONTOS)) delete PONTOS[k]; Object.assign(PONTOS, r.pontos);
+  TRECHOS.length = 0; TRECHOS.push(...r.trechos);
+}
+
 /* Catmull-Rom: curva suave passando por todos os pontos */
 function suaviza(pts, passo = 6) {
   if (pts.length < 3) {
@@ -1230,7 +1282,7 @@ function desenhaEstradas(c, oy = 0) {
   c.restore();
 }
 
-return {LARGURA,PONTOS,TRECHOS,geometria,desenhaEstradas};
+return {LARGURA,PONTOS,TRECHOS,geometria,desenhaEstradas,usaRede};
 })();
 
 __mods["scene.js"] = (() => {
@@ -1240,7 +1292,7 @@ const { Sprite, ease } = __mods["engine.js"];
 const { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS, CASAS, REGIOES } = __mods["data.js"];
 const { estadoCanteiro, estadoAnimal, estadoPadaria, fmtTempo, agora } = __mods["game.js"];
 const { CROPMETA } = __mods["cropmeta.js"];
-const { desenhaEstradas } = __mods["roads.js"];
+const { desenhaEstradas, usaRede } = __mods["roads.js"];
 
 /* mapa mais alto para aproveitar o celular na vertical: em cima a fazenda, embaixo a mata, o pomar e a saída para a cidade */
 const WORLD = { w: 1800, h: 2340 };
@@ -1248,6 +1300,52 @@ const GROUND_TOP = 440;
 const PLOT = { cx: 880, cy: 1040, hw: 80, hh: 46 };
 const PASTO = { x0: 1190, y0: 1030, x1: 1700, y1: 1240 };
 const GALINHAS = { x0: 190, y0: 1090, x1: 560, y1: 1230 };
+/* desenho da fazenda de cada cidade. São Bento é o desenho aprovado (valores acima); as outras trocam
+   a posição de tudo: canteiros, pasto, galinhas, terrenos da vila, construções e o que anda pela fazenda. */
+const LAYOUTS = {
+  'sapucai-mirim': {
+    plot: { cx: 720, cy: 1420 }, pasto: { x0: 140, y0: 1660, x1: 660, y1: 1840 }, galinhas: { x0: 1300, y0: 1740, x1: 1620, y1: 1860 },
+    lotes: { casa1: [230, 2090], casa2: [470, 2100], casa3: [710, 2090], casa4: [1340, 2080], casa5: [1590, 2100] },
+    fazendeiro: [860, 1260],
+    casa: [1450, 1250], celeiro: [430, 1150], padaria: [1380, 1640],
+    /* fazendeiro: onde ele para ao ir até cada coisa, e onde não pode passar */
+    chegar: { casa: { x: 1420, y: 1300 }, celeiro: { x: 500, y: 1205 }, poco: { x: 800, y: 1150 }, galinheiro: { x: 1700, y: 1860 }, padaria: { x: 1300, y: 1672 },
+      curral: { x: 1650, y: 2340 }, deposito: { x: 1420, y: 2340 }, silo: { x: 1700, y: 1470 } },
+    bloqueios: [
+      { l: 1250, r: 1650, t: 1080, b: 1240 },  // sede
+      { l: 280, r: 580, t: 1010, b: 1140 },    // celeiro
+      { l: 1270, r: 1490, t: 1440, b: 1630 },  // padaria
+      { l: 1540, r: 1780, t: 1600, b: 1810 },  // galinheiro
+      { l: 760, r: 1040, t: 1700, b: 1800 },   // chiqueiro
+      { l: 60, r: 330, t: 1330, b: 1470 },     // lago
+      { l: 1080, r: 1580, t: 520, b: 780 },    // igreja
+      { l: 90, r: 860, t: 560, b: 640 },       // letreiro
+      { l: 1680, r: 1780, t: 1320, b: 1416 },  // silo
+      { l: 1330, r: 1540, t: 2140, b: 2300 },  // depósito
+      { l: 1550, r: 1770, t: 2160, b: 2300 },  // curral
+      { l: 480, r: 990, t: 2220, b: 2320 },    // milharais
+    ],
+    poco: { x: 800, y: 1080, r: 42 },
+    porta: { x: 1500, y: 1288 },
+    luzes: [
+      { x: 1380, y: 1177, r: 34 }, { x: 1520, y: 1177, r: 34 }, { x: 1460, y: 1225, r: 40 },   // janelas e porta da sede
+      { x: 430, y: 1062, r: 46 }, { x: 960, y: 1170, r: 70, lampiao: true },                  // celeiro e lampião
+      { x: 1380, y: 1574, r: 40, padaria: true }, { x: 1330, y: 560, r: 70 },                 // padaria e igreja
+    ],
+    caminhao: { parado: [850, 1212], rota: [[850, 1210], [980, 1235], [1110, 1250], [1105, 1440], [1110, 1620], [1112, 1800], [1110, 1980], [1120, 2150], [1110, 2300], [1110, 2400], [1110, 2640]] },
+    trator: ['cruzBaixo', 'pasto'],
+    moradores: ['celeiro', 'galinheiro', 'praca'],
+    chiqueiro: { x: 900, y: 1800, larg: 320 },
+    milharais: [[610, 2310, 240], [860, 2320, 240]],
+    visao: { x: 900, deitado: 1560, largo: 1580 },
+  },
+};
+/* aplica o desenho da cidade (canteiros, pasto, galinhas e estradas) antes de montar a cena */
+function layoutDe(id) {
+  const L = LAYOUTS[id]; if (!L) return null;
+  Object.assign(PLOT, L.plot); Object.assign(PASTO, L.pasto); Object.assign(GALINHAS, L.galinhas); usaRede(id);
+  return L;
+}
 
 function plotPos(i) { const r = Math.floor(i / 3), c = i % 3; return { x: PLOT.cx + (c - r) * PLOT.hw, y: PLOT.cy + (c + r - 2) * PLOT.hh }; }
 function inDiamond(px, py, x, y) { return Math.abs(px - x) / PLOT.hw + Math.abs(py - y) / PLOT.hh <= 1; }
@@ -1388,8 +1486,9 @@ function fundoSapucaiMirim(W, H, seed) {
 }
 
 /* ---------- praça da Matriz (Sapucaí-Mirim) ---------- */
-const PRACA = { cx: 1250, cy: 1910, hw: 260, hh: 150 };
-const IGREJA_ESCALA = .78; /* menor que o desenho original, para não cobrir os terrenos da vila acima da praça */
+/* praça no fundo da fazenda, à direita, na frente das casinhas do fundo */
+const PRACA = { cx: 1350, cy: 830, hw: 280, hh: 130 };
+const IGREJA_ESCALA = 1.05;
 /* chão da praça: bloquete cinza com faixas de tijolo vermelho, desenhado uma vez numa imagem */
 function chaoPraca() {
   const { hw, hh } = PRACA, cv = document.createElement('canvas'); cv.width = hw * 2 + 8; cv.height = hh * 2 + 8; const c = cv.getContext('2d'), r = rng(5);
@@ -1461,6 +1560,100 @@ function floreira(c, x, y, flores) {
   if (flores) { const k = 62 / flores.width; c.drawImage(flores, x - 31, y - 20 - flores.height * k * .8, 62, flores.height * k); }
 }
 
+/* letreiro da entrada da cidade: letras brancas grandes em pé sobre um muro de pedra, com o coração vermelho */
+const LETREIRO = { x: 480, y: 620, txt: 'SAPUCAÍ-MIRIM' };
+function letreiroCidade(c, X, Y, txt) {
+  const F = 86, H = 58, prof = 7;
+  c.save(); c.font = `900 ${F}px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif`; c.textBaseline = 'alphabetic';
+  const tw = c.measureText(txt).width, cor = F * .95, gap = 14, total = cor + gap + tw, MW = total + 70, L0 = X - MW / 2;
+  /* sombra no chão, meio-fio branco e muro de pedra */
+  c.fillStyle = 'rgba(30,40,20,.28)'; c.beginPath(); c.ellipse(X + 30, Y + 4, MW * .55, 26, 0, 0, 7); c.fill();
+  c.fillStyle = '#eef0ea'; c.fillRect(L0 - 16, Y, MW + 32, 9); c.fillStyle = '#e7c34a'; c.fillRect(L0 - 16, Y + 9, MW + 32, 6);
+  const r = rng(21); c.fillStyle = '#cdbb98'; c.fillRect(L0, Y - H, MW, H);
+  for (let fy = 0; fy < 5; fy++) for (let x = L0 + (fy % 2) * 14; x < L0 + MW - 4; x += 28 + r() * 8) {
+    c.fillStyle = ['#d8c6a3', '#c4b089', '#e0d2b4', '#bfa982', '#d2bf9b'][Math.floor(r() * 5)]; c.fillRect(x + 1, Y - H + fy * (H / 5) + 1, Math.min(26 + r() * 8, L0 + MW - x - 2), H / 5 - 2);
+  }
+  c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(L0, Y - 6, MW, 6); c.fillStyle = '#e4d6b8'; c.fillRect(L0 - 4, Y - H - 6, MW + 8, 8);
+  /* letras em pé: lateral cinza (profundidade) e frente branca */
+  const bx = L0 + 35 + cor + gap, by = Y - H - 4;
+  const coracao = (ox, oy, cr) => { const w = cor, h = cor * .92, x = L0 + 35 + ox, y = by - h + oy; c.fillStyle = cr; c.beginPath(); c.moveTo(x + w / 2, y + h);
+    c.bezierCurveTo(x - w * .1, y + h * .55, x - w * .02, y - h * .05, x + w * .27, y + h * .02); c.bezierCurveTo(x + w * .42, y + h * .06, x + w / 2, y + h * .2, x + w / 2, y + h * .25);
+    c.bezierCurveTo(x + w / 2, y + h * .2, x + w * .58, y + h * .06, x + w * .73, y + h * .02); c.bezierCurveTo(x + w * 1.02, y - h * .05, x + w * 1.1, y + h * .55, x + w / 2, y + h); c.fill(); };
+  for (let k = prof; k > 0; k--) { coracao(k, -k * .5, '#8f2a26'); c.fillStyle = '#a9adb3'; c.fillText(txt, bx + k, by - k * .5); }
+  coracao(0, 0, '#d8433d');
+  const g = c.createLinearGradient(0, by - F * .75, 0, by); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#e9ebee'); c.fillStyle = g; c.fillText(txt, bx, by);
+  c.lineWidth = 1.2; c.strokeStyle = 'rgba(120,125,135,.45)'; c.strokeText(txt, bx, by);
+  c.restore();
+}
+/* palmeira imperial (tronco alto e liso, copa de folhas compridas) */
+function palmeira(c, x, y, h) {
+  c.save(); c.fillStyle = 'rgba(30,40,20,.2)'; c.beginPath(); c.ellipse(x + 10, y, 22, 6, 0, 0, 7); c.fill();
+  const g = c.createLinearGradient(x - 9, 0, x + 9, 0); g.addColorStop(0, '#d9d4c8'); g.addColorStop(.5, '#bdb6a6'); g.addColorStop(1, '#8f8778');
+  c.fillStyle = g; c.beginPath(); c.moveTo(x - 9, y); c.quadraticCurveTo(x - 5, y - h * .5, x - 5, y - h); c.lineTo(x + 5, y - h); c.quadraticCurveTo(x + 6, y - h * .5, x + 9, y); c.closePath(); c.fill();
+  c.fillStyle = '#6f8a3a'; c.fillRect(x - 6, y - h - 22, 12, 24);
+  const r = rng(Math.round(x * 7 + y));
+  const oy = y - h - 20;
+  for (let k = 0; k < 14; k++) {
+    /* folhas para os lados e caindo nas pontas; as de trás mais escuras */
+    const lado = k % 2 ? 1 : -1, ang = (k >> 1) / 6, l = h * (.34 + r() * .1), ex = x + lado * l * Math.cos(ang * 1.1), ey = oy + l * (.15 + ang * .7) - l * .1;
+    const cx1 = x + lado * l * .45 * Math.cos(ang), cy1 = oy - l * (.35 - ang * .2);
+    c.strokeStyle = k < 4 ? '#24521f' : (k % 3 ? '#2f6a2a' : '#3f8534'); c.lineCap = 'round'; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(x, oy); c.quadraticCurveTo(cx1, cy1, ex, ey); c.stroke();
+    c.lineWidth = 2.4;
+    for (let f = 1; f < 12; f++) { const t = f / 12, u = 1 - t, qx = u * u * x + 2 * u * t * cx1 + t * t * ex, qy = u * u * oy + 2 * u * t * cy1 + t * t * ey, fl = 22 * (1 - t * .55);
+      c.beginPath(); c.moveTo(qx, qy); c.lineTo(qx + lado * fl * .35, qy + fl); c.moveTo(qx, qy); c.lineTo(qx - lado * fl * .25, qy + fl * .9); c.stroke(); }
+  }
+  c.restore();
+}
+/* fazenda de Sapucaí-Mirim: no fundo, o letreiro da cidade e a praça da Matriz; sede à direita, celeiro à esquerda,
+   canteiros no meio, lago à esquerda, pasto embaixo à esquerda, padaria e galinheiro à direita e a vila na frente */
+function montaSapucaiMirim(E, IMG, api, S, add, tree, LY) {
+  /* fundo: palmeiras atrás do letreiro, matas nas laterais */
+  for (const [x, y, h] of [[150, 560, 210], [330, 540, 250], [640, 548, 230], [800, 560, 200]]) add({ x, y, z: y, tag: 'palmeira', draw: c => palmeira(c, x, y, h) });
+  [['pinheiro', 40, 560, 120], ['araucaria', 960, 560, 150, 1], ['ipe_amarelo', 900, 700, 150], ['pinheiro2', 1700, 560, 100], ['araucaria', 1760, 760, 180, 1],
+   ['araucaria', 50, 860, 180], ['pinheiro', 40, 1150, 110, 1], ['ipe_rosa', 760, 900, 140], ['arvore_frutifera', 990, 1110, 130, 1], ['pinheiro2', 1760, 1000, 96],
+   ['ipe_amarelo', 1760, 1320, 140, 1], ['araucaria', 1030, 1500, 150], ['pinheiro', 60, 1600, 104], ['ipe_rosa', 1000, 1640, 120, 1],
+   ['araucaria', 1770, 1950, 170], ['pinheiro2', 1220, 1960, 90], ['ipe_amarelo', 880, 2000, 120, 1], ['arvore_frutifera', 60, 1990, 120],
+   ['araucaria', 80, 2250, 170, 1], ['pinheiro', 300, 2300, 104], ['ipe_rosa', 1220, 2280, 130], ['pinheiro2', 1000, 2300, 96, 1], ['araucaria', 1780, 2300, 160]].forEach(a => tree(...a));
+  add({ x: LETREIRO.x, y: LETREIRO.y, z: LETREIRO.y, tag: 'letreiro', draw: c => letreiroCidade(c, LETREIRO.x, LETREIRO.y, LETREIRO.txt), onTap: () => api.tap('letreiro'),
+    hit: (wx, wy) => wx > LETREIRO.x - 420 && wx < LETREIRO.x + 420 && wy > LETREIRO.y - 170 && wy < LETREIRO.y + 10 });
+  add({ img: IMG.flores, x: 120, y: 640, s: 60 / IMG.flores.width }); add({ img: IMG.flores, x: 850, y: 646, s: 56 / IMG.flores.width });
+  [['arvore_frutifera', 230, 880, 120], ['pinheiro2', 120, 1010, 96, 1], ['ipe_amarelo', 470, 930, 130, 1]].forEach(a => tree(...a));
+  add({ img: IMG.banco, x: 640, y: 760, s: 80 / IMG.banco.width }); add({ img: IMG.flores, x: 700, y: 770, s: 52 / IMG.flores.width }); add({ img: IMG.flores, x: 360, y: 760, s: 52 / IMG.flores.width });
+  /* praça da Matriz: chão de bloquete, igreja ao fundo, ipê rosa no meio, bancos, floreiras e postes de globo */
+  const chao = chaoPraca(), P = PRACA, IX = P.cx - 20, IY = P.cy - P.hh * .55;
+  add({ layer: 0, z: 0, draw: c => c.drawImage(chao, P.cx - P.hw - 4, P.cy - P.hh - 4) });
+  add({ x: IX, y: IY, z: IY, tag: 'igreja', draw: c => igrejaMatriz(c, IX, IY), onTap: () => api.tap('igreja'),
+    hit: (wx, wy) => { const k = IGREJA_ESCALA, dx = (wx - IX) / k, dy = (wy - IY) / k; return (dx > -115 && dx < 205 && dy > -170 && dy < 0) || (Math.abs(dx) < 50 && dy > -420 && dy < 0); } });
+  /* ipê rosa na frente, à esquerda da igreja (como na praça de verdade), num canteiro quadrado */
+  const ix = P.cx - 250, iy = P.cy + 92;
+  add({ x: ix, y: iy - 4, draw: c => { c.fillStyle = '#8a5a3a'; c.beginPath(); c.moveTo(ix, iy - 30); c.lineTo(ix + 50, iy - 5); c.lineTo(ix, iy + 20); c.lineTo(ix - 50, iy - 5); c.closePath(); c.fill(); c.fillStyle = '#6a4a2e'; c.fillRect(ix - 50, iy - 5, 100, 8); } });
+  tree('ipe_rosa', ix, iy + 4, 190);
+  for (const [x, y] of [[P.cx + 70, P.cy + 40], [P.cx + 150, P.cy - 10]]) add({ img: IMG.banco, x, y, s: 80 / IMG.banco.width });
+  for (const [x, y] of [[P.cx + 30, P.cy + 10], [P.cx - 200, P.cy - 10], [P.cx + 200, P.cy + 30], [P.cx + 40, P.cy + 110]]) add({ x, y, draw: c => postePraca(c, x, y) });
+  for (const [x, y] of [[P.cx + 120, P.cy + 70], [P.cx + 190, P.cy - 40], [P.cx - 30, P.cy + 120]]) add({ x, y, draw: c => floreira(c, x, y, IMG.flores) });
+  add({ img: IMG.lagoinha, x: 190, y: 1480, s: 300 / IMG.lagoinha.width, tag: 'lago' });
+  add({ img: IMG.pedras, x: 360, y: 1470, s: 80 / IMG.pedras.width });
+  /* construções */
+  const [cx, cy] = LY.casa, [lx, ly] = LY.celeiro, [px, py] = LY.padaria;
+  const casa = add({ img: IMG.casa, x: cx, y: cy, s: 440 / IMG.casa.width, onTap: () => api.tap('casa'), tag: 'casa' });
+  const celeiro = add({ img: IMG.celeiro, x: lx, y: ly, s: 340 / IMG.celeiro.width, onTap: () => api.tap('celeiro'), tag: 'celeiro', flip: true });
+  add({ img: IMG.poco, x: 800, y: 1080, s: 115 / IMG.poco.width, onTap: () => api.tap('poco') });
+  add({ img: IMG.galinheiro, x: 1660, y: 1800, s: 270 / IMG.galinheiro.width, onTap: () => api.tap('galinheiro'), tag: 'galinheiro', flip: true });
+  S.padaria = add({ img: IMG.padaria, x: px, y: py, s: 270 / IMG.padaria.width, onTap: () => api.tap('padaria'), tag: 'padaria' });
+  add({ img: IMG.silo, x: 1730, y: 1420, s: 96 / IMG.silo.width, tag: 'silo', onTap: () => api.tap('silo') });
+  add({ img: IMG.deposito, x: 1430, y: 2300, s: 210 / IMG.deposito.width, tag: 'deposito', onTap: () => api.tap('deposito') });
+  add({ img: IMG.curral, x: 1660, y: 2310, s: 220 / IMG.curral.width, tag: 'curral', onTap: () => api.tap('curral') });
+  add({ img: IMG.feno, x: 640, y: 1150, s: 66 / IMG.feno.width }); add({ img: IMG.feno, x: 668, y: 1172, s: 60 / IMG.feno.width });
+  add({ img: IMG.carroca, x: 1230, y: 1380, s: 110 / IMG.carroca.width, flip: true });
+  add({ img: IMG.banco, x: 1600, y: 1300, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 960, y: 1240, s: 34 / IMG.lampiao.width });
+  add({ img: IMG.flores, x: 1250, y: 1270, s: 58 / IMG.flores.width }); add({ img: IMG.flores, x: 560, y: 1580, s: 52 / IMG.flores.width }); add({ img: IMG.flores, x: 1530, y: 1660, s: 52 / IMG.flores.width });
+  add({ img: IMG.tronco, x: 90, y: 1880, s: 80 / IMG.tronco.width });
+  add({ img: IMG.placa, x: 1200, y: 2250, s: 100 / IMG.placa.width });
+  add({ img: IMG.caixa, x: 960, y: 1560, s: 46 / IMG.caixa.width }); add({ img: IMG.cesto, x: 1000, y: 1580, s: 46 / IMG.cesto.width });
+  return { casa, celeiro };
+}
+
 /* ---------- montagem da cena ---------- */
 function buildScene(E, IMG, api) {
   const S = { plots: [], animals: [], fx: [], farmer: null, padaria: null, plantMode: null };
@@ -1469,6 +1662,7 @@ function buildScene(E, IMG, api) {
 
   /* céu + fundo com a Pedra do Baú (leve efeito de profundidade ao mover) */
   const cid = REGIOES.find(r => r.id === api.state().cidadeAtual) || REGIOES[0];
+  const LY = layoutDe(cid.id); S.layout = LY;
   const bg = IMG[cid.fundo] || fundoSapucaiMirim(IMG.fundo_sao_bento.width, IMG.fundo_sao_bento.height, cid.ordem), bgW = WORLD.w * 1.12, bgH = bg.height * bgW / bg.width;
   S.bg = bg; S.bgW = bgW; S.bgH = bgH;
   E.before = c => {
@@ -1496,62 +1690,50 @@ function buildScene(E, IMG, api) {
 
   /* árvores e natureza (fundo da propriedade) */
   const tree = (img, x, y, w, flip) => { const s = add({ img: IMG[img], x, y, s: w / IMG[img].width, flip: !!flip }); sway.push({ s, ph: x * .013 }); return s; };
-  tree('araucaria', 70, 640, 190); tree('araucaria', 1010, 600, 170); tree('araucaria', 1760, 640, 200); tree('pinheiro', 1640, 620, 120); tree('pinheiro2', 140, 900, 110);
-  tree('ipe_amarelo', 330, 700, 200); tree('ipe_rosa', 1720, 650, 170); tree('arvore_frutifera', 1110, 1236, 150); tree('pinheiro', 40, 1230, 120); tree('araucaria', 1780, 1370, 190); tree('ipe_amarelo', 130, 1375, 160);
-  /* mais vegetação da Mantiqueira: araucárias, ipês e pinheiros variados (tamanhos e lados diferentes) */
-  [['araucaria', 270, 560, 150, 1], ['pinheiro2', 520, 600, 96], ['ipe_rosa', 820, 575, 130, 1], ['araucaria', 1180, 560, 140], ['pinheiro', 1400, 600, 100, 1],
-   ['arvore_frutifera', 1560, 575, 118], ['pinheiro', 36, 830, 104, 1], ['araucaria', 1768, 900, 170, 1], ['ipe_amarelo', 1756, 1110, 132],
-   ['pinheiro2', 900, 1372, 100, 1], ['ipe_rosa', 1110, 1372, 118], ['araucaria', 430, 1372, 150]].forEach(a => tree(...a));
-  /* ---- parte de baixo: mata com lago, curral, pomar com galpão e silo ---- */
-  [['araucaria', 90, 1620, 170], ['pinheiro2', 330, 1600, 100, 1], ['pinheiro', 56, 1790, 110], ['araucaria', 170, 2010, 190, 1], ['ipe_rosa', 540, 1930, 140],
-   ['araucaria', 420, 2000, 160], ['pinheiro', 250, 2080, 100, 1], ['ipe_amarelo', 40, 1470, 120, 1], ['pinheiro2', 880, 2060, 96],
-   ['araucaria', 1770, 2060, 180], ['pinheiro', 1560, 2080, 104, 1],
-   /* faixa de mata no fim do mapa (para o celular em pé poder afastar sem mostrar área vazia) */
-   ['araucaria', 80, 2240, 180, 1], ['ipe_amarelo', 300, 2290, 140], ['pinheiro2', 470, 2250, 100], ['araucaria', 960, 2280, 170, 1], ['ipe_rosa', 1180, 2250, 130],
-   ['pinheiro', 1360, 2300, 110, 1], ['araucaria', 1560, 2270, 180], ['arvore_frutifera', 1740, 2250, 120, 1], ['pinheiro', 820, 2180, 96]].forEach(a => tree(...a));
-  add({ img: IMG.lagoinha, x: 250, y: 1860, s: 330 / IMG.lagoinha.width, flip: true });
-  add({ img: IMG.pedras, x: 470, y: 1810, s: 90 / IMG.pedras.width, flip: true });
-  add({ img: IMG.tronco, x: 330, y: 1960, s: 76 / IMG.tronco.width, flip: true });
-  add({ img: IMG.flores, x: 560, y: 1700, s: 50 / IMG.flores.width }); add({ img: IMG.flores, x: 760, y: 1990, s: 50 / IMG.flores.width });
-  add({ img: IMG.curral, x: 1450, y: 1510, s: 230 / IMG.curral.width, tag: 'curral', onTap: () => api.tap('curral') });
-  add({ img: IMG.deposito, x: 1650, y: 1700, s: 220 / IMG.deposito.width, tag: 'deposito', onTap: () => api.tap('deposito') });
-  add({ img: IMG.silo, x: 1730, y: 1900, s: 96 / IMG.silo.width, tag: 'silo', onTap: () => api.tap('silo') });
-  add({ img: IMG.feno, x: 1560, y: 1760, s: 64 / IMG.feno.width }); add({ img: IMG.feno, x: 1596, y: 1784, s: 58 / IMG.feno.width });
-  if (cid.cenario === 'praca-matriz') {
-    /* praça da Matriz: chão de bloquete, igreja ao fundo, ipê rosa no meio, bancos, floreiras e postes de globo */
-    const chao = chaoPraca(), P = PRACA, IX = P.cx - 20, IY = P.cy - P.hh * .55;
-    add({ layer: 0, z: 0, draw: c => c.drawImage(chao, P.cx - P.hw - 4, P.cy - P.hh - 4) });
-    add({ x: IX, y: IY, z: IY, tag: 'igreja', draw: c => igrejaMatriz(c, IX, IY), onTap: () => api.tap('igreja'),
-      hit: (wx, wy) => { const k = IGREJA_ESCALA, dx = (wx - IX) / k, dy = (wy - IY) / k; return (dx > -115 && dx < 205 && dy > -170 && dy < 0) || (Math.abs(dx) < 50 && dy > -420 && dy < 0); } });
-    /* ipê rosa na frente, à esquerda da igreja (como na praça de verdade), num canteiro quadrado */
-    const ix = P.cx - 150, iy = P.cy + 50;
-    add({ x: ix, y: iy - 4, draw: c => { c.fillStyle = '#8a5a3a'; c.beginPath(); c.moveTo(ix, iy - 30); c.lineTo(ix + 50, iy - 5); c.lineTo(ix, iy + 20); c.lineTo(ix - 50, iy - 5); c.closePath(); c.fill(); c.fillStyle = '#6a4a2e'; c.fillRect(ix - 50, iy - 5, 100, 8); } });
-    tree('ipe_rosa', ix, iy + 4, 210);
-    for (const [x, y] of [[P.cx + 70, P.cy + 40], [P.cx + 150, P.cy - 10]]) add({ img: IMG.banco, x, y, s: 80 / IMG.banco.width });
-    for (const [x, y] of [[P.cx + 30, P.cy + 10], [P.cx - 200, P.cy - 10], [P.cx + 200, P.cy + 30], [P.cx + 40, P.cy + 110]]) add({ x, y, draw: c => postePraca(c, x, y) });
-    for (const [x, y] of [[P.cx + 120, P.cy + 70], [P.cx + 190, P.cy - 40], [P.cx - 30, P.cy + 120]]) add({ x, y, draw: c => floreira(c, x, y, IMG.flores) });
-  } else {
+  let casa, celeiro;
+  if (!LY) {
+    tree('araucaria', 70, 640, 190); tree('araucaria', 1010, 600, 170); tree('araucaria', 1760, 640, 200); tree('pinheiro', 1640, 620, 120); tree('pinheiro2', 140, 900, 110);
+    tree('ipe_amarelo', 330, 700, 200); tree('ipe_rosa', 1720, 650, 170); tree('arvore_frutifera', 1110, 1236, 150); tree('pinheiro', 40, 1230, 120); tree('araucaria', 1780, 1370, 190); tree('ipe_amarelo', 130, 1375, 160);
+    /* mais vegetação da Mantiqueira: araucárias, ipês e pinheiros variados (tamanhos e lados diferentes) */
+    [['araucaria', 270, 560, 150, 1], ['pinheiro2', 520, 600, 96], ['ipe_rosa', 820, 575, 130, 1], ['araucaria', 1180, 560, 140], ['pinheiro', 1400, 600, 100, 1],
+     ['arvore_frutifera', 1560, 575, 118], ['pinheiro', 36, 830, 104, 1], ['araucaria', 1768, 900, 170, 1], ['ipe_amarelo', 1756, 1110, 132],
+     ['pinheiro2', 900, 1372, 100, 1], ['ipe_rosa', 1110, 1372, 118], ['araucaria', 430, 1372, 150]].forEach(a => tree(...a));
+    /* ---- parte de baixo: mata com lago, curral, pomar com galpão e silo ---- */
+    [['araucaria', 90, 1620, 170], ['pinheiro2', 330, 1600, 100, 1], ['pinheiro', 56, 1790, 110], ['araucaria', 170, 2010, 190, 1], ['ipe_rosa', 540, 1930, 140],
+     ['araucaria', 420, 2000, 160], ['pinheiro', 250, 2080, 100, 1], ['ipe_amarelo', 40, 1470, 120, 1], ['pinheiro2', 880, 2060, 96],
+     ['araucaria', 1770, 2060, 180], ['pinheiro', 1560, 2080, 104, 1],
+     /* faixa de mata no fim do mapa (para o celular em pé poder afastar sem mostrar área vazia) */
+     ['araucaria', 80, 2240, 180, 1], ['ipe_amarelo', 300, 2290, 140], ['pinheiro2', 470, 2250, 100], ['araucaria', 960, 2280, 170, 1], ['ipe_rosa', 1180, 2250, 130],
+     ['pinheiro', 1360, 2300, 110, 1], ['araucaria', 1560, 2270, 180], ['arvore_frutifera', 1740, 2250, 120, 1], ['pinheiro', 820, 2180, 96]].forEach(a => tree(...a));
+    add({ img: IMG.lagoinha, x: 250, y: 1860, s: 330 / IMG.lagoinha.width, flip: true });
+    add({ img: IMG.pedras, x: 470, y: 1810, s: 90 / IMG.pedras.width, flip: true });
+    add({ img: IMG.tronco, x: 330, y: 1960, s: 76 / IMG.tronco.width, flip: true });
+    add({ img: IMG.flores, x: 560, y: 1700, s: 50 / IMG.flores.width }); add({ img: IMG.flores, x: 760, y: 1990, s: 50 / IMG.flores.width });
+    add({ img: IMG.curral, x: 1450, y: 1510, s: 230 / IMG.curral.width, tag: 'curral', onTap: () => api.tap('curral') });
+    add({ img: IMG.deposito, x: 1650, y: 1700, s: 220 / IMG.deposito.width, tag: 'deposito', onTap: () => api.tap('deposito') });
+    add({ img: IMG.silo, x: 1730, y: 1900, s: 96 / IMG.silo.width, tag: 'silo', onTap: () => api.tap('silo') });
+    add({ img: IMG.feno, x: 1560, y: 1760, s: 64 / IMG.feno.width }); add({ img: IMG.feno, x: 1596, y: 1784, s: 58 / IMG.feno.width });
     /* pomar: árvores em fileiras, com tamanhos e lados variados (não parecem coladas) */
     add({ img: IMG.portao, x: 1004, y: 1640, s: 80 / IMG.portao.width });
     for (let x = 1060; x < 1500; x += 82) { add({ img: IMG.cerca, x, y: 1640, s: 84 / IMG.cerca.width, z: 1600 }); add({ img: IMG.cerca, x: x - 30, y: 2010, s: 84 / IMG.cerca.width }); }
     [[1090, 1760], [1220, 1748], [1350, 1764], [1470, 1752], [1150, 1876], [1280, 1866], [1410, 1880], [1090, 1990], [1220, 1984], [1350, 1994]].forEach(([x, y], i) => tree('arvore_frutifera', x, y, 112 + (i * 37 % 26), i % 2));
-  }
-  add({ img: IMG.lagoinha, x: 220, y: 860, s: 300 / IMG.lagoinha.width });
-  add({ img: IMG.pedras, x: 1740, y: 1310, s: 110 / IMG.pedras.width });
+    add({ img: IMG.lagoinha, x: 220, y: 860, s: 300 / IMG.lagoinha.width });
+    add({ img: IMG.pedras, x: 1740, y: 1310, s: 110 / IMG.pedras.width });
 
-  /* construções */
-  const casa = add({ img: IMG.casa, x: 590, y: 815, s: 440 / IMG.casa.width, onTap: () => api.tap('casa'), tag: 'casa' });
-  const celeiro = add({ img: IMG.celeiro, x: 1290, y: 830, s: 340 / IMG.celeiro.width, onTap: () => api.tap('celeiro'), tag: 'celeiro' });
-  add({ img: IMG.poco, x: 900, y: 860, s: 115 / IMG.poco.width, onTap: () => api.tap('poco') });
-  add({ img: IMG.galinheiro, x: 330, y: 1088, s: 270 / IMG.galinheiro.width, onTap: () => api.tap('galinheiro'), tag: 'galinheiro' });
-  S.padaria = add({ img: IMG.padaria, x: 1630, y: 946, s: 270 / IMG.padaria.width, onTap: () => api.tap('padaria'), tag: 'padaria' });
-  add({ img: IMG.feno, x: 1470, y: 860, s: 70 / IMG.feno.width }); add({ img: IMG.feno, x: 1500, y: 885, s: 64 / IMG.feno.width });
-  add({ img: IMG.carroca, x: 1150, y: 985, s: 110 / IMG.carroca.width });
-  add({ img: IMG.banco, x: 790, y: 852, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 968, y: 860, s: 34 / IMG.lampiao.width });
-  add({ img: IMG.flores, x: 420, y: 850, s: 60 / IMG.flores.width }); add({ img: IMG.flores, x: 1080, y: 862, s: 54 / IMG.flores.width }); add({ img: IMG.flores, x: 720, y: 1230, s: 52 / IMG.flores.width });
-  add({ img: IMG.tronco, x: 260, y: 1310, s: 80 / IMG.tronco.width });
-  add({ img: IMG.placa, x: 742, y: 2050, s: 100 / IMG.placa.width });
-  add({ img: IMG.caixa, x: 1040, y: 1190, s: 46 / IMG.caixa.width }); add({ img: IMG.cesto, x: 1000, y: 1208, s: 46 / IMG.cesto.width });
+    /* construções */
+    casa = add({ img: IMG.casa, x: 590, y: 815, s: 440 / IMG.casa.width, onTap: () => api.tap('casa'), tag: 'casa' });
+    celeiro = add({ img: IMG.celeiro, x: 1290, y: 830, s: 340 / IMG.celeiro.width, onTap: () => api.tap('celeiro'), tag: 'celeiro' });
+    add({ img: IMG.poco, x: 900, y: 860, s: 115 / IMG.poco.width, onTap: () => api.tap('poco') });
+    add({ img: IMG.galinheiro, x: 330, y: 1088, s: 270 / IMG.galinheiro.width, onTap: () => api.tap('galinheiro'), tag: 'galinheiro' });
+    S.padaria = add({ img: IMG.padaria, x: 1630, y: 946, s: 270 / IMG.padaria.width, onTap: () => api.tap('padaria'), tag: 'padaria' });
+    add({ img: IMG.feno, x: 1470, y: 860, s: 70 / IMG.feno.width }); add({ img: IMG.feno, x: 1500, y: 885, s: 64 / IMG.feno.width });
+    add({ img: IMG.carroca, x: 1150, y: 985, s: 110 / IMG.carroca.width });
+    add({ img: IMG.banco, x: 790, y: 852, s: 80 / IMG.banco.width }); add({ img: IMG.lampiao, x: 968, y: 860, s: 34 / IMG.lampiao.width });
+    add({ img: IMG.flores, x: 420, y: 850, s: 60 / IMG.flores.width }); add({ img: IMG.flores, x: 1080, y: 862, s: 54 / IMG.flores.width }); add({ img: IMG.flores, x: 720, y: 1230, s: 52 / IMG.flores.width });
+    add({ img: IMG.tronco, x: 260, y: 1310, s: 80 / IMG.tronco.width });
+    add({ img: IMG.placa, x: 742, y: 2050, s: 100 / IMG.placa.width });
+    add({ img: IMG.caixa, x: 1040, y: 1190, s: 46 / IMG.caixa.width }); add({ img: IMG.cesto, x: 1000, y: 1208, s: 46 / IMG.cesto.width });
+  } else ({ casa, celeiro } = montaSapucaiMirim(E, IMG, api, S, add, tree, LY));
   /* cerca do pasto */
   const fw = 86, cs = fw / IMG.cerca.width;
   for (let x = PASTO.x0 - 20; x < PASTO.x1 + 60; x += fw - 4) add({ img: IMG.cerca, x: x + fw / 2, y: PASTO.y0 - 10, s: cs, z: PASTO.y0 - 40 });
@@ -1588,7 +1770,7 @@ function buildScene(E, IMG, api) {
 
   /* casas da vila: terreno à venda ou a casa construída */
   S.lotes = CASAS.map((c, k) => {
-    const [x, y] = c.lote, L = { c, x, y };
+    const [x, y] = (LY && LY.lotes[c.id]) || c.lote, L = { c, x, y };
     L.spr = add({ x, y, z: y, tag: 'vila_' + c.id,
       hit: (wx, wy) => { const img = IMG['vila_' + c.id], w = 230, h = img.height * w / img.width; return api.state().casas[c.id] ? (wx > x - w / 2 && wx < x + w / 2 && wy > y - h && wy < y) : Math.abs(wx - x) / 92 + Math.abs(wy - (y - 30)) / 52 <= 1; },
       onTap: () => api.tapCasa(c.id),
@@ -1615,7 +1797,8 @@ function buildScene(E, IMG, api) {
   });
 
   /* fazendeiro */
-  S.farmer = add({ img: IMG.p_idle, x: 600, y: 975, s: 100 / IMG.p_idle.height, onTap: () => api.tap('fazendeiro') });
+  const [fx, fy] = LY ? LY.fazendeiro : [600, 975];
+  S.farmer = add({ img: IMG.p_idle, x: fx, y: fy, s: 100 / IMG.p_idle.height, onTap: () => api.tap('fazendeiro') });
   S.farmerPose = (pose, ms = 900) => {
     const im = IMG[pose] || IMG.p_idle; S.farmer.img = im; S.farmer.s = 100 / IMG.p_idle.height;
     clearTimeout(S._ft); S._ft = setTimeout(() => { S.farmer.img = IMG.p_idle; S.farmer.s = 100 / IMG.p_idle.height; }, ms);
@@ -1722,7 +1905,7 @@ function buildScene(E, IMG, api) {
   return S;
 }
 
-return {WORLD,PASTO,plotPos,coin,buildScene};
+return {WORLD,PASTO,plotPos,coin,buildScene,LAYOUTS};
 })();
 
 __mods["tutorial.js"] = (() => {
@@ -2281,6 +2464,7 @@ const api = {
     else if (o === 'fazendeiro') { S.farmerPose('p_acenando', 1400); toast(`Olá, ${tituloPerfil()}! Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a ${cidadeAtual().nome}.`); }
     else if (o === 'poco') toast('Água fresquinha da serra.');
     else if (o === 'igreja') toast(`Igreja Matriz · praça de ${cidadeAtual().nome}`);
+    else if (o === 'letreiro') toast(`Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a ${cidadeAtual().nome}! O letreiro mais fotografado da cidade.`);
     else if (o === 'curral') painelAnimais();
     else if (o === 'deposito') painelCeleiro();
     else if (o === 'silo') toast('Silo da fazenda: em breve guardará a ração dos animais.');
@@ -2305,20 +2489,20 @@ const FAZENDA = { x: 900, y: 980 };
 /* enquadramento inicial: na vertical mostra a largura principal da fazenda (da casa ao celeiro)
    e aproveita a altura (Pedra do Baú → fazenda → pasto → parte de baixo); na horizontal, como antes */
 function visaoInicial() {
-  const retrato = E.vh > E.vw * 1.1;
+  const retrato = E.vh > E.vw * 1.1, V = (S && S.layout && S.layout.visao) || { x: 900, deitado: 1185, largo: 1200 };
   if (retrato) {
     /* mostra de x≈350 (casa) a x≈1460 (celeiro) e do céu até o pasto */
     const z = Math.min(E.maxZoom, Math.max(E.minZoom, E.vw / 1080));
-    return { x: 900, y: 20 + E.vh / z / 2, z };
+    return { x: V.x, y: 20 + E.vh / z / 2, z };
   }
   if (E.vh <= 520) {
     /* celular de lado: casa, celeiro, canteiros e animais na tela de uma vez */
     const z = Math.min(E.maxZoom, Math.max(E.coverZoom, Math.min(E.vw / 1150, E.vh / 880))), alt = E.vh / z;
-    return { x: 905, y: Math.max(20, 1185 - (E.vh - 66) / z) + alt / 2, z };
+    return { x: V.x + 5, y: Math.max(20, V.deitado - (E.vh - 66) / z) + alt / 2, z };
   }
   /* tela larga: canteiros sempre acima da barra de baixo; sobe o quanto der para mostrar a serra */
   const cel = E.vw < 700, z = Math.max(E.coverZoom, cel ? .68 : .74), alt = E.vh / z;
-  return { x: cel ? 860 : 900, y: Math.max(20, 1200 - (E.vh - 110) / z) + alt / 2, z };
+  return { x: cel ? V.x - 40 : V.x, y: Math.max(20, V.largo - (E.vh - 110) / z) + alt / 2, z };
 }
 let mexeu = false; ['pointerdown', 'wheel'].forEach(t => $('game').addEventListener(t, () => { mexeu = true; }, { passive: true }));
 $('zIn').onclick = () => E.zoomTo(E.cam.zoom * 1.35);
@@ -2388,7 +2572,8 @@ function configurarControlesDoJogador() {
     return originalPose(pose, ms);
   };
 
-  const rects = [
+  const LY = S.layout;
+  const rects = LY ? LY.bloqueios : [
     { l: 390, r: 790, t: 642, b: 820 },   // casa principal
     { l: 1115, r: 1450, t: 630, b: 838 }, // celeiro
     { l: 215, r: 425, t: 900, b: 1080 },  // galinheiro
@@ -2400,8 +2585,8 @@ function configurarControlesDoJogador() {
     { l: 706, r: 1022, t: 1694, b: 1812 }, // chiqueiro
     { l: 968, r: 1468, t: 2112, b: 2214 }  // milharais
   ];
-  const circles = [{ x: 900, y: 860, r: 42 }]; // poço
-  const approaches = {
+  const circles = [LY ? LY.poco : { x: 900, y: 860, r: 42 }]; // poço
+  const approaches = LY ? LY.chegar : {
     casa: { x: 720, y: 870 }, celeiro: { x: 1180, y: 890 }, poco: { x: 900, y: 928 },
     galinheiro: { x: 450, y: 1110 }, padaria: { x: 1488, y: 985 },
     curral: { x: 1260, y: 1535 }, deposito: { x: 1500, y: 1738 }, silo: { x: 1625, y: 1932 }
@@ -2516,9 +2701,9 @@ function configurarControlesDoJogador() {
      O fazendeiro vai até a porta e entra; a fazenda escurece até virar noite (estrelas, janelas e
      lampião acesos, vaga-lumes) e ele sai de novo já de noite. Tocar outra vez traz o dia de volta.
      Só muda o visual e os sons: plantas e animais seguem o relógio de sempre. */
-  const PORTA = { x: 640, y: 852 };
+  const PORTA = (S.layout && S.layout.porta) || { x: 640, y: 852 };
   const ceu = { n: 0, de: 0, para: 0, t0: 0, dur: 1.8, dentro: false };
-  const LUZES = [
+  const LUZES = (S.layout && S.layout.luzes) || [
     { x: 520, y: 742, r: 34 }, { x: 660, y: 742, r: 34 }, { x: 600, y: 790, r: 40 },   // janelas e porta da casa
     { x: 1290, y: 742, r: 46 }, { x: 968, y: 790, r: 70, lampiao: true },               // celeiro e lampião
     { x: 1630, y: 880, r: 40, padaria: true },
@@ -2961,7 +3146,8 @@ function configurarVidaNaFazenda() {
     () => `Oi, ${tituloPerfil()}! Fui buscar os ovos no galinheiro.`,
     () => `Essas plantas precisam de água fresquinha da serra, ${tituloPerfil()}.`,
   ];
-  const pessoas = [['trabalhador1', 'trabalhador1_parado', 'celeiro', 34], ['trabalhadora2', 'trabalhadora2_parada', 'galinheiro', 30], ['trabalhador3', 'trabalhador3_parado', 'pomar', 22]]
+  const LY = S.layout, NOS = (LY && LY.moradores) || ['celeiro', 'galinheiro', 'pomar'];
+  const pessoas = [['trabalhador1', 'trabalhador1_parado', NOS[0], 34], ['trabalhadora2', 'trabalhadora2_parada', NOS[1], 30], ['trabalhador3', 'trabalhador3_parado', NOS[2], 22]]
     .filter(([b, parado]) => ok(parado)).map(([base, parado, no, vel], i) => {
       const q = R.PONTOS[no], img = IMG[parado];
       const spr = add({ img, x: q.x, y: q.y, s: escPessoa(img), tag: 'morador' + i, onTap: () => toast(FALAS[i]()) });
@@ -2973,34 +3159,36 @@ function configurarVidaNaFazenda() {
   }
 
   /* ---- trator: vai e volta na estrada do pasto ---- */
-  const TRATOR = ARESTAS.find(a => (a.de === 'cruzSul' && a.ate === 'pasto') || (a.ate === 'cruzSul' && a.de === 'pasto'));
+  const [ta, tb] = (LY && LY.trator) || ['cruzSul', 'pasto'];
+  const TRATOR = ARESTAS.find(a => (a.de === ta && a.ate === tb) || (a.ate === ta && a.de === tb));
   const trator = ok('trator') && TRATOR ? { c: caminho(TRATOR.pts), s: 0, sentido: 1, espera: 2, vel: 58,
     spr: add({ img: IMG.trator, x: TRATOR.pts[0][0], y: TRATOR.pts[0][1], s: 150 / IMG.trator.width, tag: 'trator', onTap: () => toast('O trator está preparando a terra do pasto.') }) } : null;
 
   /* ---- caminhão de entregas: o que você vende vai para a cidade ---- */
-  const ROTA = caminho(suavizaPts([[1150, 890], [1000, 888], [860, 896], [722, 906], [668, 990], [622, 1066], [604, 1132], [592, 1198], [598, 1262],
+  const ROTA = LY ? caminho(suavizaPts(LY.caminhao.rota)) : caminho(suavizaPts([[1150, 890], [1000, 888], [860, 896], [722, 906], [668, 990], [622, 1066], [604, 1132], [592, 1198], [598, 1262],
     [612, 1340], [620, 1440], [628, 1540], [664, 1720], [668, 1900], [646, 2060], [626, 2230], [640, 2400], [652, 2640]]));
   const TK = { estado: 'parado', s: 0, v: 0, carga: 0, pendente: 0, ultima: 0, foraAte: 0, saiEm: 0 };
-  const caminhao = ok('caminhao_desce') ? add({ img: IMG.caminhao_sobe, x: 1150, y: 892, s: 140 / IMG.caminhao_sobe.width, flip: true, tag: 'caminhao',
+  const [kx, ky] = LY ? LY.caminhao.parado : [1150, 892];
+  const caminhao = ok('caminhao_desce') ? add({ img: IMG.caminhao_sobe, x: kx, y: ky, s: 140 / IMG.caminhao_sobe.width, flip: true, tag: 'caminhao',
     onTap: () => { if (TK.estado !== 'parado') { toast('O caminhão está na estrada. Ele volta logo!'); return; } painelMercado('vender'); } }) : null;
   window.addEventListener('cf:venda', ev => { const q = Math.max(1, (ev.detail && ev.detail.qtd) || 1); if (TK.estado === 'parado') TK.carga += q; else TK.pendente += q; TK.ultima = performance.now(); TK.saiEm = 0; });
   window.addEventListener('cf:fechou', () => { if (TK.carga && TK.estado === 'parado') TK.saiEm = performance.now() + 700; });
-  add({ layer: 2, z: 892, tag: 'caminhaoAviso', draw: c => {
+  add({ layer: 2, z: ky, tag: 'caminhaoAviso', draw: c => {
     if (!caminhao || TK.estado === 'parado' || TK.s < 220 && TK.estado !== 'fora') return;
     const tx = TK.estado === 'indo' ? 'Entrega a caminho da cidade' : TK.estado === 'voltando' ? 'Caminhão voltando' : `Caminhão volta em ${Math.max(1, Math.ceil((TK.foraAte - performance.now()) / 1000))}s`;
-    c.save(); c.font = '800 16px system-ui,-apple-system,sans-serif'; const w = c.measureText(tx).width + 26, x = 1150 - w / 2, y = 860;
+    c.save(); c.font = '800 16px system-ui,-apple-system,sans-serif'; const w = c.measureText(tx).width + 26, x = kx - w / 2, y = ky - 32;
     c.shadowColor = 'rgba(0,0,0,.3)'; c.shadowBlur = 8; c.fillStyle = 'rgba(255,250,236,.95)'; c.beginPath(); c.roundRect(x, y, w, 30, 15); c.fill();
-    c.shadowBlur = 0; c.fillStyle = '#4a3512'; c.textAlign = 'center'; c.fillText(tx, 1150, y + 21); c.restore();
+    c.shadowBlur = 0; c.fillStyle = '#4a3512'; c.textAlign = 'center'; c.fillText(tx, kx, y + 21); c.restore();
   } });
 
   /* ---- chiqueiro com porcos e um milharal grande ---- */
-  const CHIQ = { x: 862, y: 1806, larg: 320 };
+  const CHIQ = (LY && LY.chiqueiro) || { x: 862, y: 1806, larg: 320 };
   if (ok('chiqueiro')) add({ img: IMG.chiqueiro, x: CHIQ.x, y: CHIQ.y, s: CHIQ.larg / IMG.chiqueiro.width, tag: 'chiqueiro', onTap: () => toast('Os porcos estão bem tratados no chiqueiro.') });
   const porcos = [['porco1', 52, -40, -64], ['porco1', 48, 44, -60], ['leitao', 30, 0, -54]].filter(([n]) => ok(n)).map(([n, larg, dx, dy], k) => {
     const spr = add({ img: IMG[n], x: CHIQ.x + dx, y: CHIQ.y + dy, z: CHIQ.y + 2 + k, s: larg / IMG[n].width, tag: 'porco' + k, onTap: () => toast(k === 2 ? 'Um leitãozinho brincalhão!' : 'Óinc! O porco está feliz.') });
     return { spr, n, larg, x: CHIQ.x + dx, y: CHIQ.y + dy, tx: CHIQ.x + dx, ty: CHIQ.y + dy, espera: Math.random() * 3, k };
   });
-  if (ok('milharal')) for (const [x, y, w] of [[1092, 2196, 250], [1356, 2206, 230]]) add({ img: IMG.milharal, x, y, s: w / IMG.milharal.width, tag: 'milharal', onTap: () => toast('Milharal da fazenda: milho para os animais e para a ração.') });
+  if (ok('milharal')) for (const [x, y, w] of (LY && LY.milharais) || [[1092, 2196, 250], [1356, 2206, 230]]) add({ img: IMG.milharal, x, y, s: w / IMG.milharal.width, tag: 'milharal', onTap: () => toast('Milharal da fazenda: milho para os animais e para a ração.') });
 
   /* ---- quadro a quadro ---- */
   const perto = (x, y, r) => Math.hypot(S.farmer.x - x, S.farmer.y - y) < r || pessoas.some(p => Math.hypot(p.x - x, p.y - y) < r * .8);

@@ -65,6 +65,18 @@ def run(viewport, mobile):
         x, y = ev("(()=>{const s=CF.E.sprites.find(s=>s.tag==='igreja'); CF.E.setZoom(1); CF.E.centerOn(s.x, s.y-60); const p=CF.E.toScreen(s.x, s.y-60); return CF.pagina(p.x,p.y)})()")
         ev("document.getElementById('toast').textContent=''"); pg.wait_for_timeout(200); pg.mouse.click(x, y); pg.wait_for_timeout(1500)
         check(f'[{tag}] tocar na igreja mostra o nome', 'Matriz' in ev("document.getElementById('toast').textContent"), ev("document.getElementById('toast').textContent"))
+        check(f'[{tag}] letreiro da cidade no fundo da fazenda', ev("CF.E.sprites.some(s=>s.tag==='letreiro')"))
+        # layout próprio: canteiros, sede e celeiro em outro lugar que em São Bento
+        p0 = ev("__mods['scene.js'].plotPos(4)")
+        pos = ev("(()=>{const t=n=>CF.E.sprites.find(s=>s.tag===n); return [t('casa').x,t('celeiro').x]})()")
+        check(f'[{tag}] fazenda com outro desenho (canteiros, sede e celeiro)', (p0['x'], p0['y']) != (880, 1040) and pos[0] > 1200 and pos[1] < 700, [p0, pos])
+        i_vazio = ev("CF.st.canteiros.findIndex((c,i)=>c.liberado&&!c.cultura)")
+        x, y = ev(f"(()=>{{const p=__mods['scene.js'].plotPos({i_vazio}); CF.E.setZoom(1); CF.E.centerOn(p.x,p.y); const q=CF.E.toScreen(p.x,p.y); return CF.pagina(q.x,q.y)}})()")
+        pg.mouse.click(x, y)
+        try: pg.wait_for_function("!document.getElementById('sheet').classList.contains('hidden')", timeout=8000); aberto = True
+        except Exception: aberto = False
+        check(f'[{tag}] tocar num canteiro de Sapucaí-Mirim abre as sementes', aberto)
+        ev("document.getElementById('shClose').click()"); pg.wait_for_timeout(300)
         viz = ev(f"__mods['data.js'].REGIOES.find(r=>r.id==='{SM}').vizinhos")
         check(f'[{tag}] pedidos são de vizinhos de Sapucaí-Mirim', s['entregas'] and all(e['nome'] in viz for e in s['entregas']), [e['nome'] for e in s['entregas']])
         ev("(()=>{const i=CF.st.canteiros.findIndex(c=>c.liberado&&!c.cultura); CF.st.sementes.milho=5; CF.G.plantar(CF.st,i,'milho');})()")
