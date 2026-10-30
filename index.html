@@ -499,8 +499,10 @@ const CASAS = [
 
 /* Campanha: ordem de desbloqueio das cidades (sequência do jogo, não ordem geográfica). */
 const REGIOES = [
-  { id: 'sao-bento-do-sapucai', nome: 'São Bento do Sapucaí', ordem: 1, depois: null },
-  { id: 'sapucai-mirim', nome: 'Sapucaí-Mirim', ordem: 2, depois: 'sao-bento-do-sapucai' },
+  { id: 'sao-bento-do-sapucai', nome: 'São Bento do Sapucaí', ordem: 1, depois: null, fundo: 'fundo_sao_bento' },
+  /* sem fundo próprio ainda: a cena desenha uma serra provisória até chegar a ilustração da cidade */
+  { id: 'sapucai-mirim', nome: 'Sapucaí-Mirim', ordem: 2, depois: 'sao-bento-do-sapucai', premio: { moedas: 400, xp: 90 },
+    vizinhos: ['Dona Lurdes do Rio', 'Empório Sapucaí', 'Seu Bené da Ponte', 'Pousada do Vale', 'Feira da Matriz', 'Quitanda da Estação'] },
   { id: 'santo-antonio-do-pinhal', nome: 'Santo Antônio do Pinhal', ordem: 3, depois: 'sapucai-mirim' },
   { id: 'campos-do-jordao', nome: 'Campos do Jordão', ordem: 4, depois: 'santo-antonio-do-pinhal' },
   { id: 'monte-verde', nome: 'Monte Verde', ordem: 5, depois: 'campos-do-jordao' },
@@ -511,8 +513,10 @@ const REGIOES = [
   { id: 'itajuba', nome: 'Itajubá', ordem: 10, depois: 'goncalves' },
   { id: 'brasopolis', nome: 'Brasópolis', ordem: 11, depois: 'itajuba' },
 ];
-/* Objetivos principais de cada cidade. Só São Bento tem área jogável nesta versão.
-   O progresso é calculado do estado do jogo (contadores e construções), nunca guardado como número solto. */
+/* Objetivos principais de cada cidade. Só as cidades listadas aqui têm área jogável.
+   O progresso é calculado do estado do jogo (contadores e construções), nunca guardado como número solto.
+   Da segunda cidade em diante, os contadores valem a partir da chegada nela (o que foi feito antes não conta),
+   e padaria/casas são as da fazenda daquela cidade. */
 const OBJETIVOS = {
   'sao-bento-do-sapucai': [
     { id: 'plantar',  texto: 'Plantar 10 canteiros',          tipo: 'cont', chave: ['plantar', '*'], qtd: 10 },
@@ -524,10 +528,23 @@ const OBJETIVOS = {
     { id: 'casas',    texto: 'Construir 3 casas da vila',     tipo: 'casas', qtd: 3 },
     { id: 'nivel',    texto: 'Chegar ao nível 5',             tipo: 'nivel', qtd: 5 },
   ],
+  'sapucai-mirim': [
+    { id: 'plantar',  texto: 'Plantar 20 canteiros',          tipo: 'cont', chave: ['plantar', '*'], qtd: 20 },
+    { id: 'colher',   texto: 'Colher 60 produtos',            tipo: 'cont', chave: ['colher', '*'], qtd: 60 },
+    { id: 'animais',  texto: 'Alimentar os animais 15 vezes', tipo: 'cont', chave: ['alimentar', '*'], qtd: 15 },
+    { id: 'entregas', texto: 'Fazer 10 entregas',             tipo: 'cont', chave: ['entregar', '*'], qtd: 10 },
+    { id: 'padaria',  texto: 'Construir a Padaria da Fazenda', tipo: 'padaria', qtd: 1 },
+    { id: 'cesta',    texto: 'Produzir 3 cestas da roça',     tipo: 'cont', chave: ['produzir', 'cesta'], qtd: 3 },
+    { id: 'casas',    texto: 'Construir 5 casas da vila',     tipo: 'casas', qtd: 5 },
+    { id: 'nivel',    texto: 'Chegar ao nível 8',             tipo: 'nivel', qtd: 8 },
+  ],
 };
+const CIDADE_INICIAL = 'sao-bento-do-sapucai';
+/* o que é de cada fazenda (fica na cidade); o resto (moedas, nível, sementes, celeiro, missões) vai junto na viagem */
+const FAZENDA_CAMPOS = ['canteiros', 'animais', 'padaria', 'casas', 'entregas'];
 const PREMIO_CIDADE = { moedas: 250, xp: 60 };
 
-return {VERSAO_SAVE,REGIAO,CULTURAS,PRODUTOS,ANIMAIS,RECEITAS,TERRENOS,CELEIRO,PADARIA,NIVEIS,BONUS_NIVEL,MISSOES,ENTREGAS_NOMES,CASAS,REGIOES,OBJETIVOS,PREMIO_CIDADE};
+return {VERSAO_SAVE,REGIAO,CULTURAS,PRODUTOS,ANIMAIS,RECEITAS,TERRENOS,CELEIRO,PADARIA,NIVEIS,BONUS_NIVEL,MISSOES,ENTREGAS_NOMES,CASAS,REGIOES,OBJETIVOS,PREMIO_CIDADE,CIDADE_INICIAL,FAZENDA_CAMPOS};
 })();
 
 __mods["cropmeta.js"] = (() => {
@@ -755,7 +772,7 @@ return {ease,Sprite,Engine,loadImages};
 __mods["game.js"] = (() => {
 /* Conecta Fazenda — regras do jogo (sem desenho). Cada ação muda o estado e devolve {ok, msg}.
    Tudo usa o relógio real (Date.now), então as plantas crescem mesmo com o jogo fechado. */
-const { CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, PADARIA, NIVEIS, BONUS_NIVEL, MISSOES, ENTREGAS_NOMES, VERSAO_SAVE, REGIAO, CASAS, REGIOES, OBJETIVOS, PREMIO_CIDADE } = __mods["data.js"];
+const { CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, PADARIA, NIVEIS, BONUS_NIVEL, MISSOES, ENTREGAS_NOMES, VERSAO_SAVE, REGIAO, CASAS, REGIOES, OBJETIVOS, PREMIO_CIDADE, CIDADE_INICIAL, FAZENDA_CAMPOS } = __mods["data.js"];
 
 const agora = () => Date.now();
 
@@ -776,6 +793,9 @@ function novoJogo(now = agora()) {
     entregas: [],
     casas: {},
     cidades: {},          /* cidades concluídas: { id: { em: data, premio: true } } */
+    cidadeAtual: CIDADE_INICIAL,
+    fazendas: {},         /* fazendas das outras cidades, guardadas enquanto o jogador está fora: { id: { canteiros, animais, … } } */
+    chegadas: {},         /* primeira chegada em cada cidade nova: { id: { em: data, base: contadores naquele momento } } */
     tut: { passo: 0, fim: false },
   };
   /* para começar já com algo para colher: um milho pronto e uma alface crescendo */
@@ -961,11 +981,12 @@ function disponiveis(st) {
   l.push('ovo', 'leite'); return l;
 }
 function novaEntrega(st, rnd = Math.random) {
+  const viz = (REGIOES.find(r => r.id === st.cidadeAtual) || {}).vizinhos || ENTREGAS_NOMES;
   const pode = disponiveis(st), pede = {};
   const n = st.nivel >= 2 && rnd() < 0.5 ? 2 : 1;
   for (let j = 0; j < n; j++) { const it = pode[Math.floor(rnd() * pode.length)]; pede[it] = (pede[it] || 0) + 2 + Math.floor(rnd() * 3); }
   const valor = Object.entries(pede).reduce((a, [k, q]) => a + PRODUTOS[k].venda * q, 0);
-  return { id: 'e' + Math.floor(rnd() * 1e9).toString(36), nome: ENTREGAS_NOMES[Math.floor(rnd() * ENTREGAS_NOMES.length)], pede, moedas: Math.round(valor * 1.5), xp: 5 + Math.round(valor / 6) };
+  return { id: 'e' + Math.floor(rnd() * 1e9).toString(36), nome: viz[Math.floor(rnd() * viz.length)], pede, moedas: Math.round(valor * 1.5), xp: 5 + Math.round(valor / 6) };
 }
 function repoeEntregas(st) { while (st.entregas.length < 3) st.entregas.push(novaEntrega(st)); }
 function entregar(st, idx) {
@@ -1007,13 +1028,18 @@ function construirCasa(st, id) {
 const casasFeitas = st => CASAS.filter(c => st.casas[c.id]).length;
 
 /* ---------- campanha das cidades ---------- */
+/* fazenda de uma cidade: a que está na tela ou a guardada (null se o jogador nunca foi lá) */
+function fazendaDe(st, id) { return id === (st.cidadeAtual || CIDADE_INICIAL) ? st : (st.fazendas && st.fazendas[id]) || null; }
 function objetivos(st, regiao) {
+  const r = REGIOES.find(x => x.id === regiao), cheg = st.chegadas && st.chegadas[regiao], faz = fazendaDe(st, regiao);
+  const naoChegou = !!(r && r.depois) && !cheg;  /* cidade nova onde o jogador ainda não pisou: nada conta */
   return (OBJETIVOS[regiao] || []).map(o => {
     let v = 0;
-    if (o.tipo === 'cont') v = lido(st, o.chave[0], o.chave[1]);
-    else if (o.tipo === 'padaria') v = st.padaria.construida ? 1 : 0;
-    else if (o.tipo === 'casas') v = casasFeitas(st);
+    if (o.tipo === 'cont') v = lido(st, o.chave[0], o.chave[1]) - (cheg ? ((cheg.base[o.chave[0]] || {})[o.chave[1]] || 0) : 0);
+    else if (o.tipo === 'padaria') v = faz && faz.padaria.construida ? 1 : 0;
+    else if (o.tipo === 'casas') v = faz ? casasFeitas(faz) : 0;
     else if (o.tipo === 'nivel') v = st.nivel;
+    v = naoChegou ? 0 : Math.max(0, v);
     return Object.assign({}, o, { feito: Math.min(o.qtd, v), ok: v >= o.qtd });
   });
 }
@@ -1037,13 +1063,33 @@ function estadoCidade(st, id) {
 function concluirCidade(st, id, now = agora()) {
   if (!progressoCidade(st, id).completa) return erro('Ainda faltam objetivos nesta cidade.');
   if (st.cidades[id] && st.cidades[id].premio) return erro('Prêmio já recebido.');
-  st.cidades[id] = { em: now, premio: true }; st.moedas += PREMIO_CIDADE.moedas;
-  const subiu = ganhaXp(st, PREMIO_CIDADE.xp);
+  const pr = (REGIOES.find(r => r.id === id) || {}).premio || PREMIO_CIDADE;
+  st.cidades[id] = { em: now, premio: true }; st.moedas += pr.moedas;
+  const subiu = ganhaXp(st, pr.xp);
   const prox = REGIOES.find(r => r.depois === id);
-  return ok('Cidade concluída!', { moedas: PREMIO_CIDADE.moedas, xp: PREMIO_CIDADE.xp, proxima: prox && prox.nome, subiu });
+  return ok('Cidade concluída!', { moedas: pr.moedas, xp: pr.xp, proxima: prox && prox.nome, subiu });
+}
+/* fazenda nova de uma cidade: canteiros, animais e pedidos do começo (sem padaria nem casas) */
+function novaFazenda(now = agora()) { const n = novoJogo(now), f = {}; for (const k of FAZENDA_CAMPOS) f[k] = n[k]; f.entregas = []; return f; }
+/* viajar: guarda a fazenda da cidade atual e abre a da outra (criada na primeira chegada).
+   Plantas e animais continuam no relógio, então o que ficou plantado cresce enquanto o jogador está fora. */
+function viajar(st, id, now = agora()) {
+  const r = REGIOES.find(x => x.id === id); if (!r) return erro('Cidade inválida.');
+  if (id === st.cidadeAtual) return erro(`Você já está em ${r.nome}.`);
+  const e = estadoCidade(st, id);
+  if (e.tipo === 'bloqueada') return erro(`Conclua ${e.requisito} para liberar ${r.nome}.`);
+  if (!OBJETIVOS[id]) return erro(`A área de ${r.nome} chega numa próxima atualização.`);
+  const guarda = {}; for (const k of FAZENDA_CAMPOS) guarda[k] = st[k];
+  st.fazendas[st.cidadeAtual] = guarda;
+  const nova = st.fazendas[id] || novaFazenda(now); delete st.fazendas[id];
+  for (const k of FAZENDA_CAMPOS) st[k] = nova[k];
+  const primeira = !!r.depois && !st.chegadas[id];
+  if (primeira) st.chegadas[id] = { em: now, base: JSON.parse(JSON.stringify(st.cont)) };
+  st.cidadeAtual = id; repoeEntregas(st);
+  return ok(`Bem-vindo a ${r.nome}!`, { primeira, nome: r.nome });
 }
 
-return {agora,novoJogo,capCeleiro,usoCeleiro,temItens,ganhaXp,xpDoNivel,estadoCanteiro,plantar,colher,colherTudo,comprarSemente,vender,melhorarCeleiro,liberarCanteiro,estadoAnimal,alimentar,coletar,construirPadaria,estadoPadaria,produzir,coletarProducao,novaEntrega,repoeEntregas,entregar,trocarEntrega,missaoAtual,iniciarMissao,resgatarMissao,fmtTempo,construirCasa,casasFeitas,objetivos,progressoCidade,estadoCidade,concluirCidade};
+return {agora,novoJogo,capCeleiro,usoCeleiro,temItens,ganhaXp,xpDoNivel,estadoCanteiro,plantar,colher,colherTudo,comprarSemente,vender,melhorarCeleiro,liberarCanteiro,estadoAnimal,alimentar,coletar,construirPadaria,estadoPadaria,produzir,coletarProducao,novaEntrega,repoeEntregas,entregar,trocarEntrega,missaoAtual,iniciarMissao,resgatarMissao,fmtTempo,construirCasa,casasFeitas,objetivos,progressoCidade,estadoCidade,concluirCidade,fazendaDe,novaFazenda,viajar};
 })();
 
 __mods["roads.js"] = (() => {
@@ -1191,7 +1237,7 @@ __mods["scene.js"] = (() => {
 /* Conecta Fazenda — a cena de São Bento do Sapucaí: fundo com a Pedra do Baú, chão, casa, celeiro,
    canteiros, animais, árvores e enfeites. Também desenha barras de crescimento e balões. */
 const { Sprite, ease } = __mods["engine.js"];
-const { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS, CASAS } = __mods["data.js"];
+const { CULTURAS, ANIMAIS, PRODUTOS, RECEITAS, CASAS, REGIOES } = __mods["data.js"];
 const { estadoCanteiro, estadoAnimal, estadoPadaria, fmtTempo, agora } = __mods["game.js"];
 const { CROPMETA } = __mods["cropmeta.js"];
 const { desenhaEstradas } = __mods["roads.js"];
@@ -1272,6 +1318,30 @@ function lockBadge(c, x, y, custo, nivel, st) {
 }
 function coin(c, x, y, r) { const g = c.createRadialGradient(x - r * .3, y - r * .3, 1, x, y, r); g.addColorStop(0, '#fff3a3'); g.addColorStop(.6, '#f6c632'); g.addColorStop(1, '#c98a0e'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.strokeStyle = '#a86f06'; c.lineWidth = 1.5; c.stroke(); }
 
+/* fundo provisório para cidade sem ilustração própria: céu de fim de tarde, serras em camadas e o gramado na frente,
+   no mesmo tamanho e com o gramado na mesma altura do fundo de São Bento (encaixa no chão do mapa) */
+function serraProvisoria(W, H, seed) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); const r = rng(11 + seed * 7);
+  const sky = c.createLinearGradient(0, 0, 0, H * .7); sky.addColorStop(0, '#3f8fdc'); sky.addColorStop(.6, '#8cc4ee'); sky.addColorStop(1, '#f3d9a6'); c.fillStyle = sky; c.fillRect(0, 0, W, H);
+  const sol = c.createRadialGradient(W * .08, H * .32, 4, W * .08, H * .32, H * .7); sol.addColorStop(0, 'rgba(255,226,150,.9)'); sol.addColorStop(1, 'rgba(255,226,150,0)'); c.fillStyle = sol; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 9; i++) { const x = r() * W, y = 30 + r() * H * .25; c.fillStyle = 'rgba(255,255,255,.8)'; for (let k = 0; k < 5; k++) { c.beginPath(); c.ellipse(x + k * 34 - 60, y + Math.sin(k) * 8, 46 + r() * 30, 18 + r() * 10, 0, 0, 7); c.fill(); } }
+  const serra = (base, amp, cor, nev) => {
+    c.fillStyle = cor; c.beginPath(); c.moveTo(0, H);
+    const f1 = .002 + r() * .002, f2 = .007 + r() * .004, p1 = r() * 9, p2 = r() * 9;
+    for (let x = 0; x <= W; x += 8) c.lineTo(x, base - amp * (.6 * Math.sin(x * f1 + p1) + .4 * Math.sin(x * f2 + p2) + 1) / 2);
+    c.lineTo(W, H); c.closePath(); c.fill();
+    if (nev) { c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(0, base - amp * .2, W, amp * .25); }
+  };
+  serra(H * .42, H * .28, '#7d9fb8', true); serra(H * .52, H * .26, '#5d8a6e', true); serra(H * .62, H * .22, '#4c7a3a'); serra(H * .7, H * .14, '#5f8f2c');
+  /* araucárias espalhadas nas encostas da frente */
+  for (let i = 0; i < 40; i++) {
+    const x = r() * W, y = H * (.66 + r() * .08), h = 30 + r() * 46; c.fillStyle = '#2f4f1c'; c.fillRect(x - 2, y - h, 4, h);
+    c.beginPath(); c.ellipse(x, y - h, h * .45, h * .14, 0, 0, 7); c.fill();
+  }
+  const g = c.createLinearGradient(0, H * .74, 0, H); g.addColorStop(0, '#78a832'); g.addColorStop(1, '#62780c'); c.fillStyle = g; c.fillRect(0, H * .74, W, H * .26);
+  return cv;
+}
+
 /* ---------- montagem da cena ---------- */
 function buildScene(E, IMG, api) {
   const S = { plots: [], animals: [], fx: [], farmer: null, padaria: null, plantMode: null };
@@ -1279,7 +1349,8 @@ function buildScene(E, IMG, api) {
   const sway = [];
 
   /* céu + fundo com a Pedra do Baú (leve efeito de profundidade ao mover) */
-  const bg = IMG.fundo_sao_bento, bgW = WORLD.w * 1.12, bgH = bg.height * bgW / bg.width;
+  const cid = REGIOES.find(r => r.id === api.state().cidadeAtual) || REGIOES[0];
+  const bg = IMG[cid.fundo] || serraProvisoria(IMG.fundo_sao_bento.width, IMG.fundo_sao_bento.height, cid.ordem), bgW = WORLD.w * 1.12, bgH = bg.height * bgW / bg.width;
   S.bg = bg; S.bgW = bgW; S.bgH = bgH;
   E.before = c => {
     /* fora do mapa (visão geral): céu em cima e grama embaixo, para nunca aparecer vazio */
@@ -1708,8 +1779,8 @@ __mods["state.js"] = (() => {
 /* Conecta Fazenda — salvar e carregar o progresso neste aparelho.
    Nesta fase o progresso fica só no navegador (localStorage), sem senha e sem dados pessoais.
    Ao carregar, tudo é conferido: valores estranhos ou corrompidos são corrigidos. */
-const { VERSAO_SAVE, CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, NIVEIS, MISSOES, CASAS, REGIOES, OBJETIVOS } = __mods["data.js"];
-const { novoJogo, repoeEntregas, agora } = __mods["game.js"];
+const { VERSAO_SAVE, CULTURAS, PRODUTOS, ANIMAIS, RECEITAS, TERRENOS, CELEIRO, NIVEIS, MISSOES, CASAS, REGIOES, OBJETIVOS, CIDADE_INICIAL, FAZENDA_CAMPOS } = __mods["data.js"];
+const { novoJogo, repoeEntregas, agora, estadoCidade } = __mods["game.js"];
 
 const CHAVE = 'conecta_fazenda_save_v1';
 const BACKUP = 'conecta_fazenda_backup';
@@ -1718,6 +1789,25 @@ const int = (v, min, max, def) => { v = Number(v); if (!Number.isFinite(v)) retu
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
 
 function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+
+/* confere e corrige a parte de uma fazenda (canteiros, animais, padaria, casas e pedidos) */
+function saneiaFazenda(raw, base, now) {
+  const fz = { canteiros: base.canteiros, animais: base.animais, padaria: { construida: false, fila: null }, casas: {}, entregas: [] };
+  if (Array.isArray(raw.canteiros)) fz.canteiros = TERRENOS.map((t, i) => {
+    const c = obj(raw.canteiros[i]); const lib = t.custo === 0 || c.liberado === true;
+    const cult = lib && CULTURAS[c.cultura] ? c.cultura : null;
+    return { liberado: lib, cultura: cult, plantadoEm: cult ? int(c.plantadoEm, 0, now, now) : 0 };
+  });
+  if (Array.isArray(raw.animais)) fz.animais = base.animais.map((a, k) => { const r = obj(raw.animais[k]); return { tipo: a.tipo, comeuEm: int(r.comeuEm, 0, now, 0) }; });
+  const pd = obj(raw.padaria); fz.padaria = { construida: pd.construida === true, fila: null };
+  const f = obj(pd.fila); if (fz.padaria.construida && RECEITAS[f.receita]) fz.padaria.fila = { receita: f.receita, inicio: int(f.inicio, 0, now, now) };
+  fz.entregas = Array.isArray(raw.entregas) ? raw.entregas.slice(0, 3).filter(e => e && Object.keys(obj(e.pede)).length && Object.keys(obj(e.pede)).every(k => PRODUTOS[k])).map(e => ({
+    id: String(e.id || '').slice(0, 20), nome: String(e.nome || 'Vizinho').slice(0, 40),
+    pede: Object.fromEntries(Object.entries(e.pede).map(([k, q]) => [k, int(q, 1, 99, 1)])), moedas: int(e.moedas, 1, 5000, 10), xp: int(e.xp, 1, 500, 5),
+  })) : [];
+  for (const c of CASAS) if (obj(raw.casas)[c.id] === true) fz.casas[c.id] = true;
+  return fz;
+}
 
 /* confere e corrige um estado vindo do armazenamento */
 function sanear(raw, now = agora()) {
@@ -1730,22 +1820,24 @@ function sanear(raw, now = agora()) {
   st.sementes = {}; for (const [k, q] of Object.entries(obj(raw.sementes))) if (CULTURAS[k]) { const n = int(q, 0, 9999, 0); if (n) st.sementes[k] = n; }
   const cel = obj(raw.celeiro); st.celeiro.melhoria = int(cel.melhoria, 0, CELEIRO.melhorias.length, 0);
   st.celeiro.itens = {}; for (const [k, q] of Object.entries(obj(cel.itens))) if (PRODUTOS[k]) { const n = int(q, 0, 99999, 0); if (n) st.celeiro.itens[k] = n; }
-  if (Array.isArray(raw.canteiros)) st.canteiros = TERRENOS.map((t, i) => {
-    const c = obj(raw.canteiros[i]); const lib = t.custo === 0 || c.liberado === true;
-    const cult = lib && CULTURAS[c.cultura] ? c.cultura : null;
-    return { liberado: lib, cultura: cult, plantadoEm: cult ? int(c.plantadoEm, 0, now, now) : 0 };
-  });
-  if (Array.isArray(raw.animais)) st.animais = base.animais.map((a, k) => { const r = obj(raw.animais[k]); return { tipo: a.tipo, comeuEm: int(r.comeuEm, 0, now, 0) }; });
-  const pd = obj(raw.padaria); st.padaria = { construida: pd.construida === true, fila: null };
-  const f = obj(pd.fila); if (st.padaria.construida && RECEITAS[f.receita]) st.padaria.fila = { receita: f.receita, inicio: int(f.inicio, 0, now, now) };
+  Object.assign(st, saneiaFazenda(raw, base, now));
   st.cont = {}; for (const [t, m] of Object.entries(obj(raw.cont))) { st.cont[t] = {}; for (const [k, q] of Object.entries(obj(m))) st.cont[t][k] = int(q, 0, 1e9, 0); }
   const ms = obj(raw.missao); st.missao = { idx: int(ms.idx, 0, MISSOES.length, 0), base: int(ms.base, 0, 1e9, 0) };
-  st.entregas = Array.isArray(raw.entregas) ? raw.entregas.slice(0, 3).filter(e => e && Object.keys(obj(e.pede)).length && Object.keys(obj(e.pede)).every(k => PRODUTOS[k])).map(e => ({
-    id: String(e.id || '').slice(0, 20), nome: String(e.nome || 'Vizinho').slice(0, 40),
-    pede: Object.fromEntries(Object.entries(e.pede).map(([k, q]) => [k, int(q, 1, 99, 1)])), moedas: int(e.moedas, 1, 5000, 10), xp: int(e.xp, 1, 500, 5),
-  })) : [];
-  st.casas = {}; for (const c of CASAS) if (obj(raw.casas)[c.id] === true) st.casas[c.id] = true;
   st.cidades = {}; for (const r of REGIOES) { const c = obj(raw.cidades)[r.id]; if (c && c.premio === true) st.cidades[r.id] = { em: int(c.em, 0, now, now), premio: true }; }
+  /* cidades: qual está na tela, as fazendas guardadas das outras e a primeira chegada em cada uma */
+  st.cidadeAtual = OBJETIVOS[raw.cidadeAtual] ? raw.cidadeAtual : CIDADE_INICIAL;
+  st.fazendas = {}; for (const r of REGIOES) { const fz = obj(raw.fazendas)[r.id]; if (OBJETIVOS[r.id] && r.id !== st.cidadeAtual && Object.keys(obj(fz)).length) st.fazendas[r.id] = saneiaFazenda(fz, novoJogo(now), now); }
+  st.chegadas = {}; for (const r of REGIOES) {
+    const c = obj(obj(raw.chegadas)[r.id]); if (!r.depois || !OBJETIVOS[r.id] || !Object.keys(c).length) continue;
+    /* a base nunca passa do que o jogador já fez (contadores só sobem) */
+    const b = {}; for (const [t, m] of Object.entries(obj(c.base))) if (st.cont[t]) { b[t] = {}; for (const [k, q] of Object.entries(obj(m))) b[t][k] = Math.min(int(q, 0, 1e9, 0), st.cont[t][k] || 0); }
+    st.chegadas[r.id] = { em: int(c.em, 0, now, now), base: b };
+  }
+  /* save mexido à mão: estar numa cidade ainda bloqueada (ou sem chegada) volta para a primeira, com a fazenda de lá */
+  if (st.cidadeAtual !== CIDADE_INICIAL && (!st.chegadas[st.cidadeAtual] || estadoCidade(st, st.cidadeAtual).tipo === 'bloqueada')) {
+    const volta = st.fazendas[CIDADE_INICIAL] || saneiaFazenda({}, novoJogo(now), now); delete st.fazendas[CIDADE_INICIAL];
+    for (const k of FAZENDA_CAMPOS) st[k] = volta[k]; st.cidadeAtual = CIDADE_INICIAL;
+  }
   /* cidade escolhida no mapa: só um nome de cidade que existe */
   if (REGIOES.some(r => r.id === raw.regiaoSel)) st.regiaoSel = raw.regiaoSel;
   /* quem cuida da fazenda: fazendeira ou fazendeiro, com um nome curto (sem símbolos) */
@@ -1835,11 +1927,13 @@ function niveis(subiu) {
 function resultado(r, onOk) { if (!r.ok) { toast(r.msg, true); return false; } onOk && onOk(r); mudou(); niveis(r.subiu); return true; }
 
 /* ---------- cidade concluída: prêmio uma vez só e libera a próxima ---------- */
+const cidadeAtual = () => REGIOES.find(r => r.id === (st && st.cidadeAtual)) || REGIOES[0];
 function checaCidade() {
-  if (!st || st.cidades['sao-bento-do-sapucai'] || !G.progressoCidade(st, 'sao-bento-do-sapucai').completa) return;
-  const r = G.concluirCidade(st, 'sao-bento-do-sapucai'); if (!r.ok) return;
+  if (!st) return;
+  const cid = REGIOES.find(c => G.objetivos(st, c.id).length && !st.cidades[c.id] && G.estadoCidade(st, c.id).tipo !== 'bloqueada' && G.progressoCidade(st, c.id).completa); if (!cid) return;
+  const r = G.concluirCidade(st, cid.id); if (!r.ok) return;
   dirty = true; salvarJa(); atualizaHud();
-  $('modal').innerHTML = `<div class="mBox"><div class="bigStar">${$('hNivel').parentElement.querySelector('svg').outerHTML}<b>✓</b></div><h2>São Bento do Sapucaí concluída!</h2><p>Você completou todos os objetivos principais. Prêmio: <b>${r.moedas} moedas</b> e ${r.xp} XP.<br><b>${esc(r.proxima)}</b> foi liberada no mapa da Mantiqueira.</p><button class="b" id="mOk">Ver o mapa</button></div>`;
+  $('modal').innerHTML = `<div class="mBox"><div class="bigStar">${$('hNivel').parentElement.querySelector('svg').outerHTML}<b>✓</b></div><h2>${esc(cid.nome)} concluída!</h2><p>Você completou todos os objetivos principais. Prêmio: <b>${r.moedas} moedas</b> e ${r.xp} XP.<br><b>${esc(r.proxima)}</b> foi liberada no mapa da Mantiqueira.</p><button class="b" id="mOk">Ver o mapa</button></div>`;
   $('modal').className = ''; $('mOk').onclick = () => { $('modal').className = 'hidden'; RG.abrir(); };
 }
 
@@ -1847,6 +1941,7 @@ function checaCidade() {
 function atualizaHud() {
   if (!st) return;
   $('hMoedas').textContent = st.moedas.toLocaleString('pt-BR');
+  $('hRegiao').textContent = cidadeAtual().nome;
   $('hNivel').textContent = st.nivel;
   const x = G.xpDoNivel(st); $('hXp').textContent = x.max ? 'Máximo' : `${x.atual} / ${x.total}`; $('hXpFill').style.width = (x.atual / x.total * 100) + '%';
   $('dCeleiro').textContent = G.usoCeleiro(st);
@@ -1938,8 +2033,8 @@ function painelMissoes(aba) {
   if (aba) abaMissao = aba;
   abrir('Missões e entregas', () => {
     const tabs = `<div class="tabs"><button class="${abaMissao === 'missoes' ? 'on' : ''}" data-act="aba:missoes">Missões</button><button class="${abaMissao === 'entregas' ? 'on' : ''}" data-act="aba:entregas">Entregas</button><button class="${abaMissao === 'cidade' ? 'on' : ''}" data-act="aba:cidade">Cidade</button></div>`;
-    if (abaMissao === 'cidade') return tabs + htmlObjetivos('sao-bento-do-sapucai');
-    if (abaMissao === 'entregas') return tabs + `<p class="sub">Pedidos da vizinhança de São Bento. Pagam mais do que vender no celeiro.</p>` + st.entregas.map((e, i) => `<div class="row"><img class="ic" src="${src('caixa')}" alt=""><div class="tx"><b>${esc(e.nome)}</b>${needHtml(e.pede)}<small>Paga ${e.moedas} moedas + ${e.xp} XP</small></div><div class="btns" style="flex-direction:column"><button class="b" data-act="entregar:${i}" ${G.temItens(st, e.pede) ? '' : 'disabled'}>Entregar</button><button class="b g" data-act="trocar:${i}">Trocar</button></div></div>`).join('');
+    if (abaMissao === 'cidade') return tabs + htmlObjetivos(cidadeAtual().id);
+    if (abaMissao === 'entregas') return tabs + `<p class="sub">Pedidos da vizinhança de ${esc(cidadeAtual().nome)}. Pagam mais do que vender no celeiro.</p>` + st.entregas.map((e, i) => `<div class="row"><img class="ic" src="${src('caixa')}" alt=""><div class="tx"><b>${esc(e.nome)}</b>${needHtml(e.pede)}<small>Paga ${e.moedas} moedas + ${e.xp} XP</small></div><div class="btns" style="flex-direction:column"><button class="b" data-act="entregar:${i}" ${G.temItens(st, e.pede) ? '' : 'disabled'}>Entregar</button><button class="b g" data-act="trocar:${i}">Trocar</button></div></div>`).join('');
     const m = G.missaoAtual(st);
     const prox = MISSOES.slice(st.missao.idx + 1, st.missao.idx + 4);
     return tabs + (m ? `<div class="mission"><h3>${esc(m.titulo)}</h3><p>${esc(m.texto)}</p><div class="mbar"><i style="width:${m.feito / m.qtd * 100}%"></i></div><div class="rw">${m.feito}/${m.qtd} · Prêmio: ${coinH}${m.moedas} + ${m.xp} XP</div>${m.completa ? `<button class="b y" data-act="resgatar">Receber prêmio</button>` : ''}</div>` : `<div class="mission"><h3>Todas as missões concluídas!</h3><p>Continue fazendo entregas. Novas regiões chegam em breve.</p></div>`)
@@ -1957,7 +2052,10 @@ function painelGanhar() {
 function htmlObjetivos(id) {
   const r = REGIOES.find(x => x.id === id), e = G.estadoCidade(st, id), ob = G.objetivos(st, id), p = G.progressoCidade(st, id);
   if (!ob.length) return `<p class="sub">${esc(r.nome)}: ${e.tipo === 'bloqueada' ? `bloqueada. Conclua ${esc(e.requisito)} primeiro.` : 'a área jogável desta cidade chega numa próxima atualização.'}</p>`;
-  return `<p class="sub">${esc(r.nome)} · ${p.feitos} de ${p.total} objetivos principais (${p.pct}%). Ao concluir todos: ${coinH}${PREMIO_CIDADE.moedas} e a próxima cidade é liberada.</p>`
+  const pr = r.premio || PREMIO_CIDADE;
+  if (r.depois && !(st.chegadas || {})[id]) return `<p class="sub">${esc(r.nome)} · ${p.total} objetivos principais. Eles começam a contar quando você chegar na cidade. Ao concluir todos: ${coinH}${pr.moedas} e a próxima cidade é liberada.</p>`
+    + ob.map(o => `<div class="obj"><i></i><span>${esc(o.texto)}</span><small>0/${o.qtd}</small></div>`).join('');
+  return `<p class="sub">${esc(r.nome)} · ${p.feitos} de ${p.total} objetivos principais (${p.pct}%). Ao concluir todos: ${coinH}${pr.moedas} e a próxima cidade é liberada.</p>`
     + ob.map(o => `<div class="obj ${o.ok ? 'ok' : ''}"><i>${o.ok ? '✓' : ''}</i><span>${esc(o.texto)}</span><small>${o.feito}/${o.qtd}</small></div>`).join('');
 }
 function painelCidade(id) {
@@ -1966,7 +2064,8 @@ function painelCidade(id) {
     const e2 = G.estadoCidade(st, id);
     if (e2.tipo === 'bloqueada') return `<div class="mission"><h3>Cidade bloqueada</h3><p>Conclua todos os objetivos principais de <b>${esc(e2.requisito)}</b> para liberar ${esc(r.nome)}.</p></div>`;
     if (e2.tipo === 'em-breve') return `<div class="mission"><h3>Liberada!</h3><p>Você concluiu a cidade anterior. A área jogável de ${esc(r.nome)} chega numa próxima atualização do jogo. Seu progresso fica guardado.</p></div>`;
-    return htmlObjetivos(id) + `<button class="b" style="width:100%;justify-content:center;margin-top:6px" data-act="entrar:${id}">Entrar na cidade</button>`;
+    if (id === cidadeAtual().id) return `<p class="sub"><b>Você está aqui.</b></p>` + htmlObjetivos(id) + `<button class="b" style="width:100%;justify-content:center;margin-top:6px" data-act="entrar:${id}">Voltar para a fazenda</button>`;
+    return htmlObjetivos(id) + `<p class="sub">${st.fazendas && st.fazendas[id] ? 'Sua fazenda de lá continua do jeito que você deixou.' : 'Lá você começa uma fazenda nova. Moedas, nível, sementes e o celeiro vão com você; a fazenda daqui fica guardada.'}</p><button class="b" style="width:100%;justify-content:center;margin-top:6px" data-act="viajar:${id}">Viajar para ${esc(r.nome)}</button>`;
   }, 'cidade');
 }
 function painelMapa() { RG.abrir(); }
@@ -2010,6 +2109,8 @@ const ACOES = {
   mercado: a => painelMercado(a),
   casa: id => resultado(G.construirCasa(st, id), r => { toast(r.msg); const L = S.lotes.find(l => l.c.id === id); if (L) S.sparkle(L.x, L.y - 60); }),
   entrar: () => { fechar(); RG.fechar(); },
+  /* a cena é montada para uma cidade só: salva, recarrega e dá as boas-vindas na chegada */
+  viajar: id => resultado(G.viajar(st, id), r => { salvarJa(); try { sessionStorage.setItem('cf_chegada', JSON.stringify({ nome: r.nome, primeira: r.primeira })); } catch (_) {} $('hud').classList.add('hidden'); location.reload(); }),
   rever: () => { fechar(); TUT.rever(); },
   perfil: () => { fechar(); escolhePerfil(false); },
   ir: a => ({ celeiro: painelCeleiro, entregas: () => painelMissoes('entregas'), missoes: () => painelMissoes('missoes'), produzir: painelProduzir })[a](),
@@ -2037,13 +2138,13 @@ const api = {
     painelSementes(i);
   },
   tapAnimal: k => animal(k),
-  tapCasa(id) { const c = CASAS.find(x => x.id === id); if (st.casas[id]) toast(`${c.nome} · São Bento do Sapucaí`); else painelConstruir(); },
+  tapCasa(id) { const c = CASAS.find(x => x.id === id); if (st.casas[id]) toast(`${c.nome} · ${cidadeAtual().nome}`); else painelConstruir(); },
   tap(o) {
     if (o === 'celeiro') painelCeleiro();
     else if (o === 'padaria') st.padaria.construida ? painelProduzir() : painelConstruir();
     else if (o === 'casa') painelMissoes('missoes');
     else if (o === 'galinheiro') painelAnimais();
-    else if (o === 'fazendeiro') { S.farmerPose('p_acenando', 1400); toast(`Olá, ${tituloPerfil()}! Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a São Bento do Sapucaí.`); }
+    else if (o === 'fazendeiro') { S.farmerPose('p_acenando', 1400); toast(`Olá, ${tituloPerfil()}! Bem-vind${perfilAtual().genero === 'f' ? 'a' : 'o'} a ${cidadeAtual().nome}.`); }
     else if (o === 'poco') toast('Água fresquinha da serra.');
     else if (o === 'curral') painelAnimais();
     else if (o === 'deposito') painelCeleiro();
@@ -2291,7 +2392,7 @@ function configurarControlesDoJogador() {
   const estrelas = Array.from({ length: 70 }, (_, k) => ({ x: (k * 523) % 1800, y: 20 + (k * 131) % 360, f: k * .9, r: .6 + (k % 3) * .45 }));
   function trocaCeu() {
     ceu.de = ceu.n; ceu.para = ceu.para ? 0 : 1; ceu.t0 = E.t;
-    toast(ceu.para ? 'Boa noite! A fazenda descansa sob as estrelas.' : 'Bom dia! O galo já cantou em São Bento.');
+    toast(ceu.para ? 'Boa noite! A fazenda descansa sob as estrelas.' : `Bom dia! O galo já cantou em ${cidadeAtual().nome}.`);
     if (window.CF_SOM) window.CF_SOM.noite(!!ceu.para);
   }
   function entraEmCasa() {
@@ -2916,6 +3017,8 @@ function configurarSombras() {
   if (!st.perfil) escolhePerfil(true);
   $('loading').remove();
   if (c.aviso) toast(c.aviso, true);
+  else { let ch = null; try { ch = JSON.parse(sessionStorage.getItem('cf_chegada')); sessionStorage.removeItem('cf_chegada'); } catch (_) {}
+    if (ch && ch.nome) toast(ch.primeira ? `Bem-vindo a ${String(ch.nome).slice(0, 40)}! Fazenda nova e novos objetivos na aba Cidade.` : `De volta a ${String(ch.nome).slice(0, 40)}.`); }
 })();
 
 </script>
